@@ -116,7 +116,6 @@ class CorticalClient():
     return json.loads(open(path).read())
 
 
-
   def _placeholderFingerprint(self, string, option):
     """
     When the API returns a null fingerprint, fill with a random or empty bitmap.
@@ -134,7 +133,7 @@ class CorticalClient():
       fingerprint = random.sample(xrange(total), int(total*TARGET_SPARSITY))
       random.setstate(state)
       return {"positions":fingerprint}
-        ## TO DO: test if these need to be sorted... if so, use fingerprint.sort()
+        ## TODO: test if these need to be sorted... if so, use fingerprint.sort()
     else:
       return {"positions":[]}
 
@@ -156,7 +155,7 @@ class CorticalClient():
     """
     # Is term actually multiple tokens?
     if " " in term:
-      return getTextBitmap(self, term)
+      return self.getTextBitmap(term)
     
     # Each term has a unique cache location:
     cachePath = os.path.join(self.cacheDir,
@@ -212,7 +211,7 @@ class CorticalClient():
     return fpInfo
 
 
-  def getTextBitmap(self, string):  ## TO DO: test this works!
+  def getTextBitmap(self, string):
     """
     This function is called when a string of multiple tokens are passed to
     getBitmap().
@@ -267,10 +266,10 @@ class CorticalClient():
       fpInfo["width"] = size["width"]
       fpInfo["height"] = size["height"]
     total = float(fpInfo["width"]) * float(fpInfo["height"])
-    on = len(fpInfo["fingerprint"]["positions"])
+    on = len(fpInfo["positions"])
     sparsity = round((on / total) * 100)
     fpInfo["sparsity"] = sparsity
-    ## TO DO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
+    ## TODO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
 
     self._writeToCache(cachePath, json.dumps(fpInfo), string)
 
@@ -279,12 +278,11 @@ class CorticalClient():
 
   def bitmapToTerms(self, onBits):
     """
+    For the given bitmap, returns the most liekly terms for which it encodes.
     
-    @param  onBits        ()
-    @return similar       ()
-    
-    add this info: https://github.com/BoltzmannBrain/python-client-sdk/blob/master/python-client-sdk/expressionsApi.py#L77
-    
+    @param  onBits          (list)             Bitmap for a fingerprint.
+    @return similar         (list)             List of dictionaries, where keys
+                                               are terms and likelihood scores.
     """
     if len(onBits) is 0:
       raise Exception("Cannot convert empty bitmap to term!")
@@ -329,6 +327,7 @@ class CorticalClient():
       similar.append(
         {"term": term["term"], "score": term["score"]}
       )
+    print similar
     return similar
 
 
@@ -360,11 +359,10 @@ class CorticalClient():
                                "Content-Type": "application/json"},
                              queryParams = {
                                "retina_name":self.retina,
-                               "POStags":POStags
+                               "POStags":None
                                },
                              postData=text)
     self._writeToCache(cachePath, response.content, "tokens")
-    import pdb; pdb.set_trace()  ## check out what is being cached and what is returned
 
     return [sentence.split(",") for sentence in response]
 
@@ -402,7 +400,7 @@ class CorticalClient():
     return json.loads(response.content)
 
 
-  def getSdr(self, term):  ## Move to utils (fluent utils?)
+  def getSdr(self, term):  ## TODO: move to utils (fluent utils?)
     bitmap = self.getBitmap(term)
     size = bitmap["width"] * bitmap["height"]
     positions = bitmap["positions"]
