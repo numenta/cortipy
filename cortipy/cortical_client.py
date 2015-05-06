@@ -73,13 +73,7 @@ class CorticalClient():
     else:
       self.apiKey = os.environ["CORTICAL_API_KEY"]
     self.apiUrl = baseUrl
-    
-    # Create cache directory if necessary
-    cacheDir = os.path.join(cacheDir, retina)
-    if not os.path.exists(cacheDir):
-      os.makedirs(cacheDir)
     self.cacheDir = cacheDir
-    
     self.verbosity = verbosity
     self.retina = retina
 
@@ -104,6 +98,12 @@ class CorticalClient():
 
 
   def _writeToCache(self, path, data, ref):
+    # Lazily create cache directory.
+    cacheDir = os.path.join(self.cacheDir, self.retina)
+    if not os.path.exists(cacheDir):
+      if self.verbosity > 0:
+        print "\tcreating cache at %s" % cacheDir
+      os.makedirs(cacheDir)
     if self.verbosity > 0:
         print "\twriting \'%s\' data to the cache" % ref
     with open(path, 'w') as f:
