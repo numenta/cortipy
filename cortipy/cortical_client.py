@@ -107,7 +107,7 @@ class CorticalClient():
     if self.verbosity > 0:
         print "\twriting \'%s\' data to the cache" % ref
     with open(path, 'w') as f:
-      f.write(json.dumps(data))
+      f.write(data)
 
 
   def _fetchFromCache(self, path, ref):
@@ -164,7 +164,7 @@ class CorticalClient():
                   
     # Pull fingerprint from the cache if it's there, otherwise query the API.
     if os.path.exists(cachePath):
-      return _self.fetch(cachePath, term)
+      return self._fetchFromCache(cachePath, term)
     if self.verbosity > 0:
       print "\tfetching \'%s\' fingerprint from REST API" % term
     response = self._queryAPI(resourcePath="/terms",
@@ -184,16 +184,17 @@ class CorticalClient():
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
+      fpInfo = {}
       if self.verbosity > 0:
-        print ("API could not return info for the text \'%s\'. Perhaps the "
+        print ("\tAPI could not return info for the text \'%s\'. Perhaps the "
               "text includes punctuation that should be ignored by the "
-              "tokenizer.\nGenerating a placeholder fingerprint for \'%s\'..."
+              "tokenizer.\n\tGenerating a placeholder fingerprint for \'%s\'..."
               % (term, term))
       fpInfo["score"] = None
       fpInfo["pos_types"] = None
       fpInfo["term"] = term
-      fpInfo["fingerprint"] =
-        self._placeholderFingerprint(term, DEFAULT_FILL_SDR)
+      fpInfo["fingerprint"] = self._placeholderFingerprint(
+        term, DEFAULT_FILL_SDR)
     
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
@@ -206,7 +207,7 @@ class CorticalClient():
     fpInfo["sparsity"] = sparsity
     ## TO DO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
 
-    self._writeToCache(cachePath, fpInfo, term)
+    self._writeToCache(cachePath, json.dumps(fpInfo), term)
 
     return fpInfo
 
@@ -232,7 +233,7 @@ class CorticalClient():
                   
     # Pull fingerprint from the cache if it's there, otherwise query the API.
     if os.path.exists(cachePath):
-      return _self.fetch(cachePath, string)
+      return self._fetchFromCache(cachePath, string)
     if self.verbosity > 0:
       print "\tfetching \'%s\' fingerprint from REST API" % string
     response = self._queryAPI(resourcePath="/text",
@@ -248,6 +249,7 @@ class CorticalClient():
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
+      fpInfo = {}
       if self.verbosity > 0:
         print ("API could not return info for the text \'%s\'. Perhaps the "
               "text includes punctuation that should be ignored by the "
@@ -256,8 +258,8 @@ class CorticalClient():
       fpInfo["score"] = None
       fpInfo["pos_types"] = None
       fpInfo["term"] = string
-      fpInfo["fingerprint"] =
-        self._placeholderFingerprint(string, DEFAULT_FILL_SDR)
+      fpInfo["fingerprint"] = self._placeholderFingerprint(
+        string, DEFAULT_FILL_SDR)
     
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
@@ -270,7 +272,7 @@ class CorticalClient():
     fpInfo["sparsity"] = sparsity
     ## TO DO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
 
-    self._writeToCache(cachePath, fpInfo, string)
+    self._writeToCache(cachePath, json.dumps(fpInfo), string)
 
     return fpInfo
 
@@ -294,7 +296,7 @@ class CorticalClient():
     
     # Pull terms from the cache if they're there, otherwise query the API.
     if os.path.exists(cachePath):
-      return _self.fetch(cachePath, "similar terms")
+      return self._fetchFromCache(cachePath, "similar terms")
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
     
@@ -349,7 +351,7 @@ class CorticalClient():
                   "tokenize-" + hashlib.sha224(text).hexdigest() + ".json")
     # Pull tokens from the cache if they're there, otherwise query the API.
     if os.path.exists(cachePath):
-      return _self.fetch(cachePath, "tokens")
+      return self._fetchFromCache(cachePath, "tokens")
     if self.verbosity > 0:
       print "\ttokenizing by querying the REST API"
     response = self._queryAPI(resourcePath="/text/tokenize",
