@@ -12,4 +12,8 @@ install:
  - python setup.py install
 
 script:
- - py.test
+ - py.test --cov cortipy
+
+after_success:
+ - pip install python-coveralls
+ - coveralls
