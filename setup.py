@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 try:
     from setuptools import setup
@@ -9,6 +9,17 @@ sdict = {}
 
 execfile('cortipy/version.py', {}, sdict)
 
+def findRequirements():
+  """
+  Read the requirements.txt file and parse into requirements for setup's
+  install_requirements option.
+  """
+  return [
+    line.strip()
+    for line in open("requirements.txt").readlines()
+    if not line.startswith("#")
+  ]
+
 sdict.update({
     'name' : 'cortipy',
     'description' : 'Python client for REST API',
@@ -18,11 +29,7 @@ sdict.update({
     'author_email' : 'alavin@numenta.com',
     'keywords' : ['sdr', 'nlp', 'rest', 'htm', 'cortical.io'],
     'license' : 'MIT',
-    'install_requires': [
-        'requests',
-        'nose',
-        'coverage',
-        'httpretty'],
+    'install_requires': findRequirements(),
     'test_suite': 'tests.unit',
     'packages' : ['cortipy'],
     'classifiers' : [
