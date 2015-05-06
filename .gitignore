@@ -4,4 +4,4 @@ dist/
 .cache/
 *.pyc
 .idea/
-.coverage/
+.coverage
