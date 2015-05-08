@@ -35,7 +35,7 @@ except ImportError:
 DEFAULT_BASE_URL = "http://api.cortical.io/rest"
 DEFAULT_RETINA = "en_synonymous"
 DEFAULT_CACHE_DIR = "/tmp/cortipy"
-DEFAULT_VERBOSITY = 1
+DEFAULT_VERBOSITY = 0
 DEFAULT_FILL_SDR = "random"
 
 # A retina is the cortical.io word space model:
@@ -486,7 +486,7 @@ class CorticalClient():
                                "term":term,
                                "start_index":0,
                                "max_results":10,
-                               "get_fingerprint":True,
+                               "get_fingerprint":False,
                                },
                              postData=None)
     self._writeToCache(cachePath, response.content, "context")
@@ -494,9 +494,11 @@ class CorticalClient():
     return response.content
   
 
-  def getSDR(self, term):
-    """Returns the SDR for the input term."""
-    bitmap = self.getBitmap(term)
+  def getSDR(self, bitmap):
+    """
+    Returns the SDR for the input bitmap. If interested in SDR for a given term,
+    first call getBitmap(term).
+    """
     size = bitmap["width"] * bitmap["height"]
     positions = bitmap["fingerprint"]["positions"]
     sdr = ""
