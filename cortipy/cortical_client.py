@@ -142,9 +142,8 @@ class CorticalClient():
 
   def getBitmap(self, term):
     """
-    For the input term, return the SDR info; either from cache or the REST API.
-    If the input term is longer than one token, a different class of the API
-    will be queried, returning a fingerprint to represent the full string.
+    For the input term, return the fingerprint info; either from cache or the 
+    REST API.
     
     @param  term       (string)     A single token.
     @return fpInfo     (dict)       Dictionary object with fields to describe
@@ -160,7 +159,9 @@ class CorticalClient():
     """
     # Is term actually multiple tokens?
     if " " in term:
-      return self.getTextBitmap(term)
+      raise ValueError("The input term '%s' is multiple tokens. Perhaps you "
+        "did not yet tokenize the input, or you should call getBitmapText()."
+        % term)
     
     # Each term has a unique cache location:
     cachePath = os.path.join(self.cacheDir,
@@ -218,9 +219,8 @@ class CorticalClient():
 
   def getTextBitmap(self, string):
     """
-    This function is called when a string of multiple tokens are passed to
-    getBitmap().
-    NOTE: this should only be called from w/in getBitmap(), not by the user.
+    For the input string of terms, return the fingerprint info; either from
+    cache or the REST API.
     
     @param  term       (string)     A string of multiple tokens.
     @return fpInfo     (dict)       Dictionary object with fields to describe
@@ -239,7 +239,7 @@ class CorticalClient():
                   "fingerprint-" + hashlib.sha224(string).hexdigest() + ".json")
                   
     # Pull fingerprint from the cache if it's there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, string)
     if self.verbosity > 0:
       print "\tfetching \'%s\' fingerprint from REST API" % string
@@ -252,9 +252,9 @@ class CorticalClient():
                                },
                              postData=string)
     responseObj = json.loads(response.content)
-
+    
     if isinstance(responseObj, list) and len(responseObj)>0:
-      fpInfo = {"fingerprint":responseObj[0]}
+      fpInfo = responseObj[0]
     else:
       fpInfo = {}
       if self.verbosity > 0:
@@ -264,7 +264,7 @@ class CorticalClient():
               % (string, string))
       fpInfo["score"] = None
       fpInfo["pos_types"] = None
-      fpInfo["term"] = string
+      fpInfo["text"] = string
       fpInfo["fingerprint"] = self._placeholderFingerprint(
         string, DEFAULT_FILL_SDR)
     
@@ -278,7 +278,8 @@ class CorticalClient():
     sparsity = round((on / total) * 100)
     fpInfo["sparsity"] = sparsity
 
-    self._writeToCache(cachePath, json.dumps(fpInfo), string)
+    if self.useCache:
+      self._writeToCache(cachePath, json.dumps(fpInfo), string)
 
     return fpInfo
 
@@ -304,7 +305,7 @@ class CorticalClient():
                   "similarTerms-" + hashlib.sha224(data).hexdigest() + ".json")
     
     # Pull terms from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, "similar terms")
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
@@ -323,8 +324,8 @@ class CorticalClient():
                                "context_id":None
                                },
                              postData=data)
-    
-    self._writeToCache(cachePath, response.content, "similar terms")
+    if self.useCache:
+      self._writeToCache(cachePath, response.content, "similar terms")
 
     # Return terms in human-readable format
     responseObj = json.loads(response.content)
@@ -360,7 +361,7 @@ class CorticalClient():
     cachePath = os.path.join(self.cacheDir,
                   "tokenize-" + hashlib.sha224(text).hexdigest() + ".json")
     # Pull tokens from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, "tokens")
     if self.verbosity > 0:
       print "\ttokenizing the text by querying the REST API"
@@ -373,7 +374,8 @@ class CorticalClient():
                                "POStags":None
                                },
                              postData=text)
-    self._writeToCache(cachePath, response.content, "tokens")
+    if self.useCache:
+      self._writeToCache(cachePath, response.content, "tokens")
 
     splits = response.content[1:-1].split("\"")
     return [splits[i] for i in range(len(splits)) if i%2 != 0]
@@ -392,7 +394,7 @@ class CorticalClient():
     cachePath = os.path.join(self.cacheDir,
                   "slice-" + hashlib.sha224(text).hexdigest() + ".json")
     # Pull slices from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, "slices")
     if self.verbosity > 0:
       print "\tslicing the text by querying the REST API"
@@ -407,7 +409,8 @@ class CorticalClient():
                                "get_fingerprint":False
                                },
                              postData=text)
-    self._writeToCache(cachePath, response.content, "slices")
+    if self.useCache:
+      self._writeToCache(cachePath, response.content, "slices")
 #    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
     return response.content
   
@@ -441,7 +444,7 @@ class CorticalClient():
       hashlib.sha224(str(sorted(bitmap1+bitmap2))).hexdigest() +
       ".json")
     # Pull slices from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, "comparison")
     if self.verbosity > 0:
       print "\tcomparing the bitmaps by querying the REST API"
@@ -457,7 +460,8 @@ class CorticalClient():
                                       "Content-Type": "application/json"},
                              queryParams = {"retina_name":self.retina},
                              postData=data)
-    self._writeToCache(cachePath, response.content, "comparison")
+    if self.useCache:
+      self._writeToCache(cachePath, response.content, "comparison")
     
     return json.loads(response.content)
 
@@ -475,7 +479,7 @@ class CorticalClient():
     cachePath = os.path.join(self.cacheDir,
                   "context-" + hashlib.sha224(term).hexdigest() + ".json")
     # Pull tokens from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, "context")
     if self.verbosity > 0:
       print "\tfetching the term's context from the REST API"
@@ -491,7 +495,8 @@ class CorticalClient():
                                "get_fingerprint":False,
                                },
                              postData=None)
-    self._writeToCache(cachePath, response.content, "context")
+    if self.useCache:
+      self._writeToCache(cachePath, response.content, "context")
 
     return response.content
   
