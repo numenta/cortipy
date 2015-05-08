@@ -33,9 +33,13 @@ class CorticalClientTestCase(unittest.TestCase):
 
 
   @httpretty.activate
-  @patch.object(os.path, 'exists', return_value=False)
+  @patch.object(os.path, 'exists', return_value=True)
+  @patch.object(cortipy.CorticalClient, '_fetchFromCache')
   @patch.object(cortipy.CorticalClient, '_writeToCache')
-  def testClientRespectsOptionNotToCache_getBitmap(self, mockWriteToCache, _mockExists):
+  def testClientRespectsOptionNotToCache_getBitmap(self, 
+                                                   mockFetchFromCache, 
+                                                   mockWriteToCache, 
+                                                   _mockExists):
     """
     Tests that the client will not read or write the cache when useCache=False 
     for client.getBitmap().
@@ -59,6 +63,7 @@ class CorticalClientTestCase(unittest.TestCase):
 
     # Assert.
     # --------
+    (mockFetchFromCache.called).should.be(False)
     (mockWriteToCache.called).should.be(False)
 
 
