@@ -66,6 +66,7 @@ class CorticalClient():
                baseUrl=DEFAULT_BASE_URL,
                retina=DEFAULT_RETINA,
                cacheDir=DEFAULT_CACHE_DIR,
+               useCache=True,
                verbosity=DEFAULT_VERBOSITY):
     # Instantiate API credentials
     if apiKey:
@@ -76,6 +77,7 @@ class CorticalClient():
     self.cacheDir = cacheDir
     self.verbosity = verbosity
     self.retina = retina
+    self.useCache = useCache
 
 
   def _queryAPI(self, resourcePath, method, queryParams, postData, headers={}):
@@ -161,7 +163,7 @@ class CorticalClient():
                   "fingerprint-" + hashlib.sha224(term).hexdigest() + ".json")
                   
     # Pull fingerprint from the cache if it's there, otherwise query the API.
-    if os.path.exists(cachePath):
+    if self.useCache and os.path.exists(cachePath):
       return self._fetchFromCache(cachePath, term)
     if self.verbosity > 0:
       print "\tfetching \'%s\' fingerprint from REST API" % term
@@ -205,7 +207,8 @@ class CorticalClient():
     fpInfo["sparsity"] = sparsity
     ## TO DO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
 
-    self._writeToCache(cachePath, json.dumps(fpInfo), term)
+    if self.useCache:
+      self._writeToCache(cachePath, json.dumps(fpInfo), term)
 
     return fpInfo
 
