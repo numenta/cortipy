@@ -82,7 +82,6 @@ class CorticalClient():
     url = self.apiUrl + resourcePath
     headers['api-key'] = self.apiKey
     response = None
-    
     if method == 'GET':
       response = requests.get(url, params=queryParams, headers=headers)
     elif method == 'POST':
@@ -112,7 +111,7 @@ class CorticalClient():
 
   def _fetchFromCache(self, path, ref):
     if self.verbosity > 0:
-        print "\tfetching \'%s\' data from the cache" % ref
+      print "\tfetching \'%s\' data from the cache at %s" % (ref, path)
     return json.loads(open(path).read())
 
 
