@@ -63,7 +63,6 @@ class CorticalClientTestCase(unittest.TestCase):
     # Get the request sent to the API and check it.
     request = httpretty.last_request()
     (request.method).should.equal('GET')
-    (request.path).should.equal('/rest/terms?get_fingerprint=True&term=cat&max_results=10&retina_name=en_synonymous&start_index=0')
     (request.headers['content-type']).should.equal('application/json')
     (request).should.have.property("querystring").being.equal({
         "retina_name": ["en_synonymous"],
