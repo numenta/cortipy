@@ -35,7 +35,7 @@ class CorticalClientTestCase(unittest.TestCase):
   # Patching os.path.exists and os.mkdir to prevent caching logic from fetching
   # and storing to cache.
   @patch.object(os.path, 'exists', return_value=False)
-  @patch.object(os, 'mkdir')
+  @patch.object(cortipy.CorticalClient, '_writeToCache')
   def testGetBitmap(self, mockPathExists, mockMkdirs):
     # Arrange.
     # --------
