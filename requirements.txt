@@ -1,9 +1,11 @@
 # Testing
 pytest==2.4.2
+pytest-cov==1.6
 mock==1.0.1
 coverage==3.7.1
 unittest2==0.5.1
-httpretty==0.7.0
+httpretty==0.8.8
+sure==1.2.10
 
 # Program requirements
 requests==1.2.3

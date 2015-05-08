@@ -1,136 +1,143 @@
-import cortipy
 import os
-import requests
-import unittest2 as unittest
 
-from mock import Mock, patch
+import sure
+import httpretty
+
+import cortipy
+
+import unittest2 as unittest
+from mock import patch
+
+MOCK_API_DATA_DIR = os.path.join(
+  os.path.dirname(os.path.abspath(__file__)),
+  "mock-api-data"
+)
+
+
+
+def getMockApiData(name):
+  with open(os.path.join(MOCK_API_DATA_DIR, name)) as dataFile:
+    return dataFile.read()
 
 
 
 class CorticalClientTestCase(unittest.TestCase):
-  
+
+
   def testConstructionDoesNotTouchFileSystem(self):
     with patch.object(os, 'makedirs') as mock_mkdirs:
       # Construct the client.
       cortipy.CorticalClient()
-    self.assertEqual(mock_mkdirs.call_count, 0)
-    
+    assert(mock_mkdirs.call_count == 0)
 
-  def testWriteToCache(self):
+
+
+  @httpretty.activate
+  @patch.object(os.path, 'exists', return_value=True)
+  @patch.object(cortipy.CorticalClient, '_fetchFromCache')
+  @patch.object(cortipy.CorticalClient, '_writeToCache')
+  def testClientRespectsOptionNotToCache_getBitmap(self, 
+                                                   mockFetchFromCache, 
+                                                   mockWriteToCache, 
+                                                   _mockExists):
+    """
+    Tests that the client will not read or write the cache when useCache=False 
+    for client.getBitmap().
+    """
+    
+    # Arrange.
+    # --------
+    # Mock JSON response from API:
+    mockResponseString = getMockApiData("terms-cat.json")
+
+    # Mock out the API endpoint we expect to be called
+    httpretty.register_uri(httpretty.GET, "http://api.cortical.io/rest/terms",
+                           body=mockResponseString,
+                           content_type="application/json")
+    # Create the clinet object we'll be testing.
+    client = cortipy.CorticalClient(useCache=False)
+
+    # Act.
+    # --------
+    client.getBitmap("cat")
+
+    # Assert.
+    # --------
+    (mockFetchFromCache.called).should.be(False)
+    (mockWriteToCache.called).should.be(False)
+
+
+
+  def testClientRespectsOptionNotToCache_getTextBitmap(self):
+    """
+    Tests that the client will not read or write the cache when useCache=False 
+    for client.getTextBitmap().
+    """
+    # TODO: Implement.
     pass
 
 
-  def testFetchFromCache(Self):
+
+  def testClientRespectsOptionNotToCache_bitmapToTerms(self):
+    """
+    Tests that the client will not read or write the cache when useCache=False 
+    for client.bitmapToTerms().
+    """
+    # TODO: Implement.
     pass
-  
-  
-  def testGetQueryToAPI(self):
-    # Patch the request in cortipy.CorticalCLient._queryAPI().
-    with patch.object(requests, 'get') as mock_get:
-      mock_get.return_value = mock_response = Mock()
-      mock_response.status_code = 200
-      client = cortipy.CorticalClient("apikey")
-      response = client._queryAPI("path", 'GET', {}, None, {})
-      self.assertEqual(response.status_code, 200)
 
 
-  def testPostQueryToAPI(self):
-    # Patch the request in cortipy.CorticalCLient._queryAPI().
-    with patch.object(requests, 'post') as mock_post:
-      mock_post.return_value = mock_response = Mock()
-      mock_response.status_code = 200
-      client = cortipy.CorticalClient("apikey")
-      response = client._queryAPI("path", 'POST', {}, None, {})
-      self.assertEqual(response.status_code, 200)
+
+  def testClientRespectsOptionNotToCache_tokenize(self):
+    """
+    Tests that the client will not read or write the cache when useCache=False 
+    for client.tokenize().
+    """
+    # TODO: Implement.
+    pass
 
 
-  def testCompare(self):
-    client = cortipy.CorticalClient("apikey")
-  
-    # Test bitmaps of identical SDRs.
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,13]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,13]}
-          }
-    distances = client.compare(fp1, fp2)
-    self.assertEqual(distances["euclideanDistance"], 0.0,
-      "Euclidean distance is incorrect.")
-    self.assertEqual(distances["overlappingAll"], 2,
-      "Overlap count is incorrect.")
+
+  @httpretty.activate
+  def testGetBitmap(self):
+    """
+    Tests client.getBitmap(). Asserts the proper query parameters are passed
+    to the API, returns a complete JSON string in response, and asserts that 
+    string is converted into the expected result object for the client code.
+    """
     
-    # Test bitmaps of orthogonal SDRs.
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[15]}
-          }
-    distances = client.compare(fp1, fp2)
-    self.assertEqual(distances["euclideanDistance"], 1.0,
-      "Euclidean distance is incorrect.")
-    self.assertEqual(distances["overlappingAll"], 0,
-      "Overlap count is incorrect.")
+    # Arrange.
+    # --------
+    # Mock JSON response from API:
+    mockResponseString = getMockApiData("terms-cat.json")
+
+    # Mock out the API endpoint we expect to be called
+    httpretty.register_uri(httpretty.GET, "http://api.cortical.io/rest/terms",
+                           body=mockResponseString,
+                           content_type="application/json")
+    # Create the client object we'll be testing.
+    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+
+    # Act.
+    # --------
+    bitmap = client.getBitmap("cat")
+
+    # Assert.
+    # --------
+    # Check result object.
+    (bitmap).should.have.key("term").being.equal("cat")
+    (bitmap).should.have.key("fingerprint").being.a("dict")
+    (bitmap["fingerprint"]).should.have.key("positions").being.a("list")
     
-    # Test bitmaps of similar SDRs, w/ overlap, to be closer than those of
-    # dissimilar SDRs.
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,1]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[1,3]}
-          }
-    fp3 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[10,11]}
-          }
-    distances_similar = client.compare(fp1, fp2)
-    distances_dissimilar = client.compare(fp1, fp3)
-    self.assertTrue((distances_similar["euclideanDistance"] <
-            distances_dissimilar["euclideanDistance"]), ("Euclidean for "
-            "dissimilar SDRs is incorrectly less than that of similar SDRs."))
-    self.assertTrue((distances_similar["overlappingAll"] <
-            distances_dissimilar["overlappingAll"]), ("Overlap for dissimilar "
-            "SDRs is incorrectly less than that of similar SDRs."))
+    # Get the request sent to the API and check it.
+    request = httpretty.last_request()
+    (request.method).should.equal('GET')
+    (request.headers['content-type']).should.equal('application/json')
+    (request).should.have.property("querystring").being.equal({
+        "retina_name": ["en_synonymous"],
+        "term": ["cat"],
+        "start_index": ["0"],
+        "max_results": ["10"],
+        "get_fingerprint": ["True"]
+    })
 
-
-  def testGetContextReturnFields(self):
-    client = cortipy.CorticalClient("apikey")
-    contexts = client.getContext("android")
-    
-    # Test for correct fields.
-    self.assertTrue(isinstance(contexts, list))
-    self.assertTrue(("context_label" and "fingerprint" and "context_id")
-      in contexts[0], "Data structure returned by getContext() does not contain"
-      " req'd fields.")
-    
-    # Test context fields have contents as expected.
-    self.assertTrue(isinstance(contexts[0]["context_label"], str))
-    self.assertEqual(contexts[0]["context_id"], 0)
-    
-
-  def testGetSDRFromFingerprint(self):
-    client = cortipy.CorticalClient("apikey")
-    
-    fp = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,13]}
-          }
-    self.assertEqual(client.getSDR(fp), '1000000000000100')
-
-    fp = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[]}
-          }
-    self.assertEqual(client.getSDR(fp), '0000000000000000')
-
-
-if __name__ == '__main__':
-  unittest.main()
