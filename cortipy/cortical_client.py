@@ -67,12 +67,14 @@ def cacheDecorator(func):
   def cacheWrapper(*args, **kwargs):
     client = args[0]
     cacheDir = client.cacheDir
-    cacheKey = hashlib.sha224(json.dumps(kwargs)).hexdigest()
+    requestString = json.dumps(kwargs)
+    cacheKey = hashlib.sha224(requestString).hexdigest()
     cachePath = os.path.join(cacheDir, cacheKey + ".json")
 
     if client.useCache and os.path.exists(cachePath):
       if client.verbosity > 0:
-        print "\tfetching data from the cache at %s" % cachePath
+        print "Fetching API data from the cache at %s" % cachePath
+        print "\t%s" % requestString
       return json.loads(open(cachePath).read())
 
     else:
@@ -83,10 +85,11 @@ def cacheDecorator(func):
         # Lazily create cache directory.
         if not os.path.exists(client.cacheDir):
           if client.verbosity > 0:
-            print "\tcreating cache at %s" % client.cacheDir
+            print "Creating cache at %s" % client.cacheDir
           os.makedirs(client.cacheDir)
         if client.verbosity > 0:
-            print "\twriting data to the cache at %s" % cachePath
+          print "Writing API response to the cache at %s" % cachePath
+          print "\t%s" % requestString
         with open(cachePath, 'w') as f:
           f.write(json.dumps(result))
 
@@ -144,7 +147,8 @@ class CorticalClient():
     if response.status_code != 200:
       raise Exception("Response " + str(response.status_code)
                       + ": " + response.content)
-    if self.verbosity:
+    if self.verbosity > 1:
+      print "API Response content:"
       print response.content
     responseObj = json.loads(response.content)
     return responseObj
