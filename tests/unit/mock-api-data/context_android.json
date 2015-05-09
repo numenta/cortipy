@@ -1,1 +1,22 @@
-[{"context_label":"functionality","fingerprint":{"positions":[]},"context_id":0},{"context_label":"playstation portable","fingerprint":{"positions":[]},"context_id":1},{"context_label":"desktop","fingerprint":{"positions":[]},"context_id":2},{"context_label":"smartphone","fingerprint":{"positions":[]},"context_id":3}]
+[
+  {
+    "context_label": "functionality",
+    "fingerprint": {"positions": []},
+    "context_id": 0
+  },
+  {
+    "context_label": "playstation portable",
+    "fingerprint": {"positions": []},
+    "context_id": 1
+  },
+  {
+    "context_label": "desktop",
+    "fingerprint": {"positions": []},
+    "context_id": 2
+  },
+  {
+    "context_label": "smartphone",
+    "fingerprint": {"positions": []},
+    "context_id": 3
+  }
+]

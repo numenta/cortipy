@@ -275,10 +275,7 @@ class CorticalClient():
               "text includes punctuation that should be ignored by the "
               "tokenizer.\nGenerating a placeholder fingerprint for \'%s\'..."
               % (string, string))
-      fpInfo["score"] = None
-      fpInfo["pos_types"] = None
-      fpInfo["text"] = string
-      fpInfo["fingerprint"] = self._placeholderFingerprint(
+      fpInfo["positions"] = self._placeholderFingerprint(
         string, DEFAULT_FILL_SDR)
     
     # Include values for SDR dimensions and sparsity.
@@ -287,9 +284,13 @@ class CorticalClient():
       fpInfo["width"] = size["width"]
       fpInfo["height"] = size["height"]
     total = float(fpInfo["width"]) * float(fpInfo["height"])
-    on = len(fpInfo["fingerprint"]["positions"])
+    on = len(fpInfo["positions"])
     sparsity = round((on / total) * 100)
     fpInfo["sparsity"] = sparsity
+    fpInfo["text"] = string
+    fpInfo["fingerprint"] = {}
+    fpInfo["fingerprint"]["positions"] = fpInfo["positions"]
+    del fpInfo["positions"]
 
     return fpInfo
 
