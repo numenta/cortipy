@@ -377,6 +377,7 @@ class CorticalClient():
     if self.useCache:
       self._writeToCache(cachePath, response.content, "tokens")
 
+    ## TO DO: rework the return object after json.loads()
     splits = response.content[1:-1].split("\"")
     return [splits[i] for i in range(len(splits)) if i%2 != 0]
 
@@ -412,7 +413,7 @@ class CorticalClient():
     if self.useCache:
       self._writeToCache(cachePath, response.content, "slices")
 #    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
-    return response.content
+    return json.loads(response.content)
   
   
   def compare(self, fingerprint1, fingerprint2):
@@ -498,7 +499,7 @@ class CorticalClient():
     if self.useCache:
       self._writeToCache(cachePath, response.content, "context")
 
-    return response.content
+    return json.loads(response.content)
   
 
   def getSDR(self, bitmap):
