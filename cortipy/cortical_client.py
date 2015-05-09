@@ -368,6 +368,7 @@ class CorticalClient():
                                },
                              postData=text)
 
+    ## TO DO: rework the return object after json.loads()
     splits = response.content[1:-1].split("\"")
     return [splits[i] for i in range(len(splits)) if i%2 != 0]
 
@@ -393,7 +394,7 @@ class CorticalClient():
                                },
                              postData=text)
 #    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
-    return response.content
+    return json.loads(response.content)
   
   
   def compare(self, fingerprint1, fingerprint2):
@@ -458,7 +459,7 @@ class CorticalClient():
                                },
                              postData=None)
 
-    return response.content
+    return json.loads(response.content)
   
 
   def getSDR(self, bitmap):
