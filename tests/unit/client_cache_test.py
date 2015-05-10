@@ -21,87 +21,36 @@ def getMockApiData(name):
 class CorticalClientTestCase(unittest.TestCase):
 
 
-  def testConstructionDoesNotTouchFileSystem(self):
-    with patch.object(os, 'makedirs') as mock_mkdirs:
-      # Construct the client.
-      cortipy.CorticalClient()
-    assert(mock_mkdirs.call_count == 0)
+  @patch.object(os, 'makedirs')
+  def testConstructionDoesNotTouchFileSystem(self, mockMkdirs):
+    # Construct the client.
+    cortipy.CorticalClient()
+    assert(mockMkdirs.call_count == 0)
 
 
-  @patch.object(os.path, 'exists', return_value=True)
-  @patch.object(cortipy.CorticalClient, '_fetchFromCache')
-  @patch.object(cortipy.CorticalClient, '_writeToCache')
-  def testClientRespectsOptionNotToCache_getBitmap(self, 
-                                                   mockFetchFromCache, 
-                                                   mockWriteToCache, 
-                                                   _mockExists):
-    """
-    Tests that the client will not read or write the cache when useCache=False 
-    for client.getBitmap().
-    """
-    # Arrange: mock JSON response from API, mock out the API endpoint we expect
-    # to be called.
-    mockResponseString = getMockApiData("terms_owl.json")
-    httpretty.register_uri(httpretty.GET, "http://api.cortical.io/rest/terms",
-                           body=mockResponseString,
-                           content_type="application/json")
-    
-    # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(useCache=False)
-    client.getBitmap("owl")
-  
-    # Assert:
-    self.assertFalse(mockFetchFromCache.called)
-    self.assertFalse(mockWriteToCache.called)
-  
-  
   @httpretty.activate
-  @patch.object(os.path, 'exists', return_value=True)
-  @patch.object(cortipy.CorticalClient, '_fetchFromCache')
-  @patch.object(cortipy.CorticalClient, '_writeToCache')
-  def testClientRespectsOptionNotToCache_getTextBitmap(self,
-                                                       mockFetchFromCache,
-                                                       mockWriteToCache,
-                                                       _mockExists):
-    """
-    Tests that the client will not read or write the cache when useCache=False 
-    for client.getTextBitmap().
-    """
-    # Arrange: mock JSON response from API, mock out the API endpoint we expect
-    # to be called.
-    mockResponseString = getMockApiData("text_androids.json")
-    httpretty.register_uri(httpretty.POST, "http://api.cortical.io/rest/text",
-                           body=mockResponseString,
-                           content_type="application/json")
-    
-    # Act: create the client object we'll be testing.
+  def whenUsingCache_ApiCallsWriteToCache(self):
+    client = cortipy.CorticalClient(useCache=True)
+    client._queryAPI()
+    pass
+
+
+
+  def whenUsingCache_ApiCallsReadFromCache(self):
+    client = cortipy.CorticalClient(useCache=True)
+    pass
+
+
+
+  def whenNotUsingCache_ApiCallsDontWriteToCache(self):
     client = cortipy.CorticalClient(useCache=False)
-    client.getTextBitmap("do androids dream of electric sheep")
-  
-    # Assert:
-    self.assertFalse(mockFetchFromCache.called)
-    self.assertFalse(mockWriteToCache.called)
-
-
-
-  def testClientRespectsOptionNotToCache_bitmapToTerms(self):
-    """
-    Tests that the client will not read or write the cache when useCache=False 
-    for client.bitmapToTerms().
-    """
-    # TODO: Implement.
     pass
 
 
 
-  def testClientRespectsOptionNotToCache_tokenize(self):
-    """
-    Tests that the client will not read or write the cache when useCache=False 
-    for client.tokenize().
-    """
-    # TODO: Implement.
+  def whenNotUsingCache_ApiCallsDontReadFromCache(self):
+    client = cortipy.CorticalClient(useCache=False)
     pass
-
 
 
 if __name__ == '__main__':
