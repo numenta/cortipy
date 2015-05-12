@@ -67,15 +67,23 @@ def cacheDecorator(func):
   def cacheWrapper(*args, **kwargs):
     client = args[0]
     cacheDir = client.cacheDir
-    requestString = json.dumps(kwargs)
+    method = args[1]
+    resourcePath = args[2]
+    queryParams = args[3]
+    postData = ""
+    if "postData" in kwargs:
+      postData = kwargs["postData"]
+    requestString = json.dumps([
+      resourcePath, method, json.dumps(queryParams), postData
+    ])
     cacheKey = hashlib.sha224(requestString).hexdigest()
     cachePath = os.path.join(cacheDir, cacheKey + ".json")
 
     if client.useCache and os.path.exists(cachePath):
       if client.verbosity > 0:
         print "Fetching API data from the cache at %s" % cachePath
-        print "\t%s" % requestString
-      return json.loads(open(cachePath).read())
+        print "\tRequest string: %s" % requestString
+      return json.loads(open(cachePath, "r").read())
 
     else:
       # Wrapped function gets executed here.
@@ -89,8 +97,8 @@ def cacheDecorator(func):
           os.makedirs(client.cacheDir)
         if client.verbosity > 0:
           print "Writing API response to the cache at %s" % cachePath
-          print "\t%s" % requestString
-        with open(cachePath, 'w') as f:
+          print "\t%s" % result
+        with open(cachePath, "w") as f:
           f.write(json.dumps(result))
 
     return result
@@ -125,8 +133,11 @@ class CorticalClient():
 
 
   @cacheDecorator
-  def _queryAPI(self, resourcePath, method, queryParams, postData, headers={}):
+  def _queryAPI(self, method, resourcePath, queryParams, 
+                postData=None, headers=None):
     url = self.apiUrl + resourcePath
+    if headers is None:
+      headers = {}
     headers['api-key'] = self.apiKey
     response = None
 
@@ -198,19 +209,20 @@ class CorticalClient():
       raise ValueError("The input term '%s' is multiple tokens. Perhaps you "
         "did not yet tokenize the input, or you should call getBitmapText()."
         % term)
-    
-    responseObj = self._queryAPI(resourcePath="/terms",
-                             method="GET",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "term":term,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":True
-                               },
-                             postData=None)
+
+    responseObj = self._queryAPI("GET",
+                                 "/terms", 
+                                 {
+                                   "retina_name": self.retina,
+                                   "term": term,
+                                   "start_index": 0,
+                                   "max_results": 10,
+                                   "get_fingerprint": True
+                                 }, 
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
 
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
@@ -257,14 +269,16 @@ class CorticalClient():
                                         'positions' of ON bits
                                       - 'pos_types': list of parts of speech
     """
-    responseObj = self._queryAPI(resourcePath="/text",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina
-                               },
-                             postData=string)
+    responseObj = self._queryAPI("POST", 
+                                 "/text", 
+                                 {
+                                   "retina_name": self.retina
+                                 }, 
+                                 postData=string,
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
     
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
@@ -315,22 +329,23 @@ class CorticalClient():
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
     
-    response = self._queryAPI(resourcePath="/expressions/similar_terms",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":False,
-                               "pos_type":None,
-                               "sparsity":TARGET_SPARSITY,
-                               "context_id":None
-                               },
-                             postData=data)
+    responseObj = self._queryAPI("POST", 
+                              "/expressions/similar_terms", 
+                              {
+                                "retina_name":self.retina,
+                                "start_index":0,
+                                "max_results":10,
+                                "get_fingerprint":False,
+                                "pos_type":None,
+                                "sparsity":TARGET_SPARSITY,
+                                "context_id":None
+                              },
+                              postData=data,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
     # Return terms in human-readable format
-    responseObj = json.loads(response.content)
     similar = []
     for term in responseObj:
       similar.append(
@@ -359,15 +374,17 @@ class CorticalClient():
     Optional query params:
       - 'POStags': tokenizer will only return the specified parts of speech
     """
-    response = self._queryAPI(resourcePath="/text/tokenize",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "POStags":None
-                               },
-                             postData=text)
+    response = self._queryAPI("POST", 
+                              "/text/tokenize",
+                              {
+                                "retina_name":self.retina,
+                                "POStags":None
+                              },
+                              postData=text,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
 
     ## TO DO: rework the return object after json.loads()
     splits = response.content[1:-1].split("\"")
@@ -383,17 +400,19 @@ class CorticalClient():
       - 'get_fingerprint': boolean, if the fingerprint should be returned with
       the results
     """
-    response = self._queryAPI(resourcePath="/text/slices",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":False
-                               },
-                             postData=text)
+    response = self._queryAPI("POST", 
+                              "/text/slices",
+                              {
+                                "retina_name":self.retina,
+                                "start_index":0,
+                                "max_results":10,
+                                "get_fingerprint":False
+                              },
+                              postData=text,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
 #    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
     return json.loads(response.content)
   
@@ -428,14 +447,16 @@ class CorticalClient():
         {"positions": bitmap2}
       ]
     )
-    response = self._queryAPI(resourcePath="/compare",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                                      "Content-Type": "application/json"},
-                             queryParams = {"retina_name":self.retina},
-                             postData=data)
+    response = self._queryAPI("POST", 
+                              "/compare",
+                              {"retina_name":self.retina},
+                              postData=data,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
     
-    return json.loads(response.content)
+    return response
 
 
   def getContext(self, term):
@@ -447,20 +468,21 @@ class CorticalClient():
                               'context_label', 'fingerprint' (the bitmap for the
                               context label), and 'context_id'.
     """
-    response = self._queryAPI(resourcePath="/terms/contexts",
-                             method="GET",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "term":term,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":False,
-                               },
-                             postData=None)
+    response = self._queryAPI("GET", 
+                              "/terms/contexts",
+                              {
+                                "retina_name":self.retina,
+                                "term":term,
+                                "start_index":0,
+                                "max_results":10,
+                                "get_fingerprint":False,
+                              },
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
 
-    return json.loads(response.content)
+    return response
   
 
   def getSDR(self, bitmap):
