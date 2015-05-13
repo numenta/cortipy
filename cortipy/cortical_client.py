@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 import hashlib
 import os
 import random
 import requests
+
 from functools import wraps
 
 try:
@@ -39,7 +39,7 @@ DEFAULT_CACHE_DIR = "/tmp/cortipy"
 DEFAULT_VERBOSITY = 0
 DEFAULT_FILL_SDR = "random"
 
-# A retina is the cortical.io word space model:
+# A retina is the Cortical.io word space model:
 # http://documentation.cortical.io/retinas.html#the-retinas
 RETINA_SIZES = {
       "en_synonymous": {
@@ -55,12 +55,11 @@ RETINA_SIZES = {
 TARGET_SPARSITY = 0.01
 
 
-
 def cacheDecorator(func):
   """
-  Created to wrap the CorticalClient's _queryAPI function. If the client's
+  Created to wrap the CorticalClient's _queryAPI() method. If the client's
   cache is enabled, will try to load API responses from the local cache before
-  going to the API. The before returning control to the calling function, will
+  going to the API. Then before returning control to the calling function, will
   cache the API responses into the local file system.
   """
   @wraps(func)
@@ -109,8 +108,8 @@ def cacheDecorator(func):
 
 class CorticalClient():
   """
-  Main class for making calls to the REST API. The function calls here are
-  derived from the cortical.io Python SDK.
+  Main class for making calls to the Cortical.io REST API. The function calls
+  here are derived from the Cortical.io Python SDK.
   """
 
   def __init__(self,
@@ -207,7 +206,7 @@ class CorticalClient():
     # Is term actually multiple tokens?
     if " " in term:
       raise ValueError("The input term '%s' is multiple tokens. Perhaps you "
-        "did not yet tokenize the input, or you should call getBitmapText()."
+        "did not yet tokenize the input, or you should call getTextBitmap()."
         % term)
 
     responseObj = self._queryAPI("GET",
@@ -366,56 +365,51 @@ class CorticalClient():
     
     Example:
       >>> c = cortipy.CorticalClient(apiKey)
-      >>> c.tokenize('The cow jumped over the moon. Then it ran to the other '
-                     'side. And then the sun came up.')
-      ['the,cow,jumped,over,the,moon', 'then,it,ran,to,the,otherside', 
-      'and,then,the,sun,came,up']
+      >>> c.tokenize("This is Deckard. How much is an electric ostrich?")
+      ['this,is,deckard', 'how,much,is,an,electric,ostrich']
     
     Optional query params:
       - 'POStags': tokenizer will only return the specified parts of speech
     """
-    response = self._queryAPI("POST", 
-                              "/text/tokenize",
-                              {
-                                "retina_name":self.retina,
-                                "POStags":None
-                              },
-                              postData=text,
-                              headers={
-                                "Accept": "Application/json",
-                                "Content-Type": "application/json"
-                              })
-
-    ## TO DO: rework the return object after json.loads()
-    splits = response.content[1:-1].split("\"")
-    return [splits[i] for i in range(len(splits)) if i%2 != 0]
+    return self._queryAPI("POST",
+                          "/text/tokenize",
+                          {
+                            "retina_name":self.retina,
+                            "POStags":None
+                          },
+                          postData=text,
+                          headers={
+                            "Accept": "Application/json",
+                            "Content-Type": "application/json"
+                          })
 
 
-  def slice(self, text):
-    """
-    Slice the text into meaningful sections; over a sequence of sdrs in a text,
-    slices at significant changes in the meaning.
-    
-    Optional query params:
-      - 'get_fingerprint': boolean, if the fingerprint should be returned with
-      the results
-    """
-    response = self._queryAPI("POST", 
-                              "/text/slices",
-                              {
-                                "retina_name":self.retina,
-                                "start_index":0,
-                                "max_results":10,
-                                "get_fingerprint":False
-                              },
-                              postData=text,
-                              headers={
-                                "Accept": "Application/json",
-                                "Content-Type": "application/json"
-                              })
-#    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
-    return json.loads(response.content)
-  
+  # NOTE: slice() does not yet work properly; cortical.io is working on it
+#  def slice(self, text):
+#    """
+#    Slice the text into meaningful sections; over a sequence of SDRs in a text,
+#    slices at significant changes in the meaning.
+#    
+#    Optional query params:
+#      - 'get_fingerprint': boolean, if the fingerprint should be returned with
+#      the results
+#    """
+#    response = self._queryAPI("POST", 
+#                              "/text/slices",
+#                              {
+#                                "retina_name":self.retina,
+#                                "start_index":0,
+#                                "max_results":10,
+#                                "get_fingerprint":False
+#                              },
+#                              postData=text,
+#                              headers={
+#                                "Accept": "Application/json",
+#                                "Content-Type": "application/json"
+#                              })
+##    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
+#    return json.loads(response.content)
+
   
   def compare(self, fingerprint1, fingerprint2):
     """
