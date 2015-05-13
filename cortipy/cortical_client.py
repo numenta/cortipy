@@ -20,11 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 import hashlib
 import os
 import random
 import requests
+
+from functools import wraps
 
 try:
   import simplejson as json
@@ -37,9 +38,8 @@ DEFAULT_RETINA = "en_synonymous"
 DEFAULT_CACHE_DIR = "/tmp/cortipy"
 DEFAULT_VERBOSITY = 0
 DEFAULT_FILL_SDR = "random"
-DEFAULT_PARTOFPSEECH = None
 
-# A retina is the cortical.io word space model:
+# A retina is the Cortical.io word space model:
 # http://documentation.cortical.io/retinas.html#the-retinas
 RETINA_SIZES = {
       "en_synonymous": {
@@ -52,13 +52,64 @@ RETINA_SIZES = {
       }
     }
 
-TARGET_SPARSITY = 0.03
+TARGET_SPARSITY = 0.01
+
+
+def cacheDecorator(func):
+  """
+  Created to wrap the CorticalClient's _queryAPI() method. If the client's
+  cache is enabled, will try to load API responses from the local cache before
+  going to the API. Then before returning control to the calling function, will
+  cache the API responses into the local file system.
+  """
+  @wraps(func)
+  def cacheWrapper(*args, **kwargs):
+    client = args[0]
+    cacheDir = client.cacheDir
+    method = args[1]
+    resourcePath = args[2]
+    queryParams = args[3]
+    postData = ""
+    if "postData" in kwargs:
+      postData = kwargs["postData"]
+    requestString = json.dumps([
+      resourcePath, method, json.dumps(queryParams), postData
+    ])
+    cacheKey = hashlib.sha224(requestString).hexdigest()
+    cachePath = os.path.join(cacheDir, cacheKey + ".json")
+
+    if client.useCache and os.path.exists(cachePath):
+      if client.verbosity > 0:
+        print "Fetching API data from the cache at %s" % cachePath
+        print "\tRequest string: %s" % requestString
+      return json.loads(open(cachePath, "r").read())
+
+    else:
+      # Wrapped function gets executed here.
+      result = func(*args, **kwargs)
+
+      if client.useCache:
+        # Lazily create cache directory.
+        if not os.path.exists(client.cacheDir):
+          if client.verbosity > 0:
+            print "Creating cache at %s" % client.cacheDir
+          os.makedirs(client.cacheDir)
+        if client.verbosity > 0:
+          print "Writing API response to the cache at %s" % cachePath
+          print "\t%s" % result
+        with open(cachePath, "w") as f:
+          f.write(json.dumps(result))
+
+    return result
+
+  return cacheWrapper
 
 
 
 class CorticalClient():
   """
-  Main class for making calls to the REST API.
+  Main class for making calls to the Cortical.io REST API. The function calls
+  here are derived from the Cortical.io Python SDK.
   """
 
   def __init__(self,
@@ -68,7 +119,7 @@ class CorticalClient():
                cacheDir=DEFAULT_CACHE_DIR,
                useCache=True,
                verbosity=DEFAULT_VERBOSITY):
-    # Instantiate API credentials
+    # Instantiate API credentials.
     if apiKey:
       self.apiKey = apiKey
     else:
@@ -80,10 +131,22 @@ class CorticalClient():
     self.useCache = useCache
 
 
-  def _queryAPI(self, resourcePath, method, queryParams, postData, headers={}):
+  @cacheDecorator
+  def _queryAPI(self, method, resourcePath, queryParams, 
+                postData=None, headers=None):
     url = self.apiUrl + resourcePath
+    if headers is None:
+      headers = {}
     headers['api-key'] = self.apiKey
     response = None
+
+    if self.verbosity > 0:
+      print "\tCalling API: %s %s" % (method, url)
+      print "\tHeaders:\n\t%s" % json.dumps(headers)
+      print "\tQuery params:\n\t%s" % json.dumps(queryParams)
+      if method == "POST":
+        print "\tPost data: \n\t%s" % postData
+
     if method == 'GET':
       response = requests.get(url, params=queryParams, headers=headers)
     elif method == 'POST':
@@ -94,27 +157,11 @@ class CorticalClient():
     if response.status_code != 200:
       raise Exception("Response " + str(response.status_code)
                       + ": " + response.content)
-
-    return response
-
-
-  def _writeToCache(self, path, data, ref):
-    # Lazily create cache directory.
-    cacheDir = os.path.join(self.cacheDir, self.retina)
-    if not os.path.exists(cacheDir):
-      if self.verbosity > 0:
-        print "\tcreating cache at %s" % cacheDir
-      os.makedirs(cacheDir)
-    if self.verbosity > 0:
-        print "\twriting \'%s\' data to the cache" % ref
-    with open(path, 'w') as f:
-      f.write(data)
-
-
-  def _fetchFromCache(self, path, ref):
-    if self.verbosity > 0:
-      print "\tfetching \'%s\' data from the cache at %s" % (ref, path)
-    return json.loads(open(path).read())
+    if self.verbosity > 1:
+      print "API Response content:"
+      print response.content
+    responseObj = json.loads(response.content)
+    return responseObj
 
 
   def _placeholderFingerprint(self, string, option):
@@ -141,45 +188,40 @@ class CorticalClient():
 
   def getBitmap(self, term):
     """
-    For the input term, return the SDR info; either from cache or the REST API.
-    If the input term is longer than one token, a different class of the API
-    will be queried, returning a fingerprint to represent the full string.
+    For the input term, return the fingerprint info; either from cache or the 
+    REST API.
     
-    @param  term       (string)       A single token.
-    @return fpInfo     (dict)         Dictionary object with fields to describe
-                                      the returned fingerprint:
-                                        - 'term'
-                                        - 'sparsity' of the bitmap
-                                        - 'fingerprint' bitmap given by the
-                                          'positions' of ON bits
-                                        - 'width and 'height' dimensions
+    @param  term       (string)     A single token.
+    @return fpInfo     (dict)       Dictionary object with fields to describe
+                                    the returned fingerprint:
+                                      - 'term'
+                                      - 'sparsity' of the bitmap (%)
+                                      - 'df': the fraction of documents in the
+                                        corpus for which this term appears
+                                      - 'height' and 'width' dimensions
+                                      - 'fingerprint' bitmap given by the
+                                        'positions' of ON bits
+                                      - 'pos_types': list of parts of speech
     """
     # Is term actually multiple tokens?
     if " " in term:
-      return self.getTextBitmap(term)
-    
-    # Each term has a unique cache location:
-    cachePath = os.path.join(self.cacheDir,
-                  "fingerprint-" + hashlib.sha224(term).hexdigest() + ".json")
-                  
-    # Pull fingerprint from the cache if it's there, otherwise query the API.
-    if self.useCache and os.path.exists(cachePath):
-      return self._fetchFromCache(cachePath, term)
-    if self.verbosity > 0:
-      print "\tfetching \'%s\' fingerprint from REST API" % term
-    response = self._queryAPI(resourcePath="/terms",
-                             method="GET",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "term":term,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":True
-                               },
-                             postData=None)
-    responseObj = json.loads(response.content)
+      raise ValueError("The input term '%s' is multiple tokens. Perhaps you "
+        "did not yet tokenize the input, or you should call getTextBitmap()."
+        % term)
+
+    responseObj = self._queryAPI("GET",
+                                 "/terms", 
+                                 {
+                                   "retina_name": self.retina,
+                                   "term": term,
+                                   "start_index": 0,
+                                   "max_results": 10,
+                                   "get_fingerprint": True
+                                 }, 
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
 
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
@@ -205,48 +247,38 @@ class CorticalClient():
     on = len(fpInfo["fingerprint"]["positions"])
     sparsity = round((on / total) * 100)
     fpInfo["sparsity"] = sparsity
-    ## TO DO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
-
-    if self.useCache:
-      self._writeToCache(cachePath, json.dumps(fpInfo), term)
 
     return fpInfo
 
 
   def getTextBitmap(self, string):
     """
-    This function is called when a string of multiple tokens are passed to
-    getBitmap().
-    NOTE: this should only be called from w/in getBitmap(), not by the user.
+    For the input string of terms, return the fingerprint info; either from
+    cache or the REST API.
     
-    @param  term       (string)       A string of multiple tokens.
-    @return fpInfo     (dict)         Dictionary object with fields to describe
-                                      the returned fingerprint:
-                                        - 'term'
-                                        - 'sparsity' of the bitmap
-                                        - 'fingerprint' bitmap given by the
-                                          'positions' of ON bits
-                                        - 'width and 'height' dimensions
+    @param  term       (string)     A string of multiple tokens.
+    @return fpInfo     (dict)       Dictionary object with fields to describe
+                                    the returned fingerprint:
+                                      - 'term'
+                                      - 'sparsity' of the bitmap (%)
+                                      - 'df': the fraction of documents in the
+                                        corpus for which this term appears
+                                      - 'height' and 'width' dimensions
+                                      - 'fingerprint' bitmap given by the
+                                        'positions' of ON bits
+                                      - 'pos_types': list of parts of speech
     """
-    # Each string has a unique cache location:
-    cachePath = os.path.join(self.cacheDir,
-                  "fingerprint-" + hashlib.sha224(string).hexdigest() + ".json")
-                  
-    # Pull fingerprint from the cache if it's there, otherwise query the API.
-    if os.path.exists(cachePath):
-      return self._fetchFromCache(cachePath, string)
-    if self.verbosity > 0:
-      print "\tfetching \'%s\' fingerprint from REST API" % string
-    response = self._queryAPI(resourcePath="/text",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina
-                               },
-                             postData=string)
-    responseObj = json.loads(response.content)
-
+    responseObj = self._queryAPI("POST", 
+                                 "/text", 
+                                 {
+                                   "retina_name": self.retina
+                                 }, 
+                                 postData=string,
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
+    
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
@@ -256,10 +288,7 @@ class CorticalClient():
               "text includes punctuation that should be ignored by the "
               "tokenizer.\nGenerating a placeholder fingerprint for \'%s\'..."
               % (string, string))
-      fpInfo["score"] = None
-      fpInfo["pos_types"] = None
-      fpInfo["term"] = string
-      fpInfo["fingerprint"] = self._placeholderFingerprint(
+      fpInfo["positions"] = self._placeholderFingerprint(
         string, DEFAULT_FILL_SDR)
     
     # Include values for SDR dimensions and sparsity.
@@ -271,141 +300,192 @@ class CorticalClient():
     on = len(fpInfo["positions"])
     sparsity = round((on / total) * 100)
     fpInfo["sparsity"] = sparsity
-    ## TODO: unit test (and raise exception here?) for sparsity w/in range of TARGET_SPARSITY
-
-    self._writeToCache(cachePath, json.dumps(fpInfo), string)
+    fpInfo["text"] = string
+    fpInfo["fingerprint"] = {}
+    fpInfo["fingerprint"]["positions"] = fpInfo["positions"]
+    del fpInfo["positions"]
 
     return fpInfo
 
 
   def bitmapToTerms(self, onBits):
     """
-    For the given bitmap, returns the most liekly terms for which it encodes.
+    For the given bitmap, returns the most likely terms for which it encodes.
     
     @param  onBits          (list)             Bitmap for a fingerprint.
     @return similar         (list)             List of dictionaries, where keys
                                                are terms and likelihood scores.
+    Optional query params:
+      - 'pos_type': what part of speech (e.g. 'NOUN') to return
+      - 'context_id': id returned by getContext, specifying the context of the 
+        returned terms
     """
     if len(onBits) is 0:
       raise Exception("Cannot convert empty bitmap to term!")
     
     # Each list of similar terms has a unique cache location:
     data = json.dumps({"positions": onBits})
-    cachePath = os.path.join(self.cacheDir,
-                  "similarTerms-" + hashlib.sha224(data).hexdigest() + ".json")
-    
-    # Pull terms from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
-      return self._fetchFromCache(cachePath, "similar terms")
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
     
-    # Include part of speech in the query?
-    pos = None
-    if DEFAULT_PARTOFPSEECH:
-      pos = data["pos_types"]
-    
-    response = self._queryAPI(resourcePath="/expressions/similar_terms",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "start_index":0,
-                               "max_results":10,
-                               "get_fingerprint":False,
-                               "pos_type":pos,
-                               "sparsity":TARGET_SPARSITY,
-                               "context_id":None
-                               },
-                             postData=data)
-    
-    self._writeToCache(cachePath, response.content, "similar terms")
-
+    responseObj = self._queryAPI("POST", 
+                              "/expressions/similar_terms", 
+                              {
+                                "retina_name":self.retina,
+                                "start_index":0,
+                                "max_results":10,
+                                "get_fingerprint":False,
+                                "pos_type":None,
+                                "sparsity":TARGET_SPARSITY,
+                                "context_id":None
+                              },
+                              postData=data,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
     # Return terms in human-readable format
-    responseObj = json.loads(response.content)
     similar = []
     for term in responseObj:
       similar.append(
         {"term": term["term"], "score": term["score"]}
       )
-    print similar
     return similar
 
 
   def tokenize(self, text):
-    """Get a list of sentence tokens from a text string.
+    """Get a list of sentence tokens from a text string. Non-alphanumeric and
+    end-of-sentence characters are exlcuded. Only returns terms found in the
+    corpus.
     
     @param text     (str)               Text string to tokenize
-    @return         (list)              List of lists where each inner list 
-                                        contains the string tokens from a
-                                        sentence in the input text
+    @return         (list)              List where each entry contains the
+                                        string tokens from a sentence in the
+                                        input text
     
     Example:
-      >>> c = cc.CorticalClient(apiKey)
-      >>> cc.tokenize('The cow jumped over the moon. Then it ran to the other '
-                     'side. And then the sun came up.')
-      [[u'cow', u'jumped', u'moon'], [u'ran', u'other side'], [u'sun', u'came']]
+      >>> c = cortipy.CorticalClient(apiKey)
+      >>> c.tokenize("This is Deckard. How much is an electric ostrich?")
+      ['this,is,deckard', 'how,much,is,an,electric,ostrich']
+    
+    Optional query params:
+      - 'POStags': tokenizer will only return the specified parts of speech
     """
-    # Each list of tokens has a unique cache location:
-    cachePath = os.path.join(self.cacheDir,
-                  "tokenize-" + hashlib.sha224(text).hexdigest() + ".json")
-    # Pull tokens from the cache if they're there, otherwise query the API.
-    if os.path.exists(cachePath):
-      return self._fetchFromCache(cachePath, "tokens")
-    if self.verbosity > 0:
-      print "\ttokenizing by querying the REST API"
-    response = self._queryAPI(resourcePath="/text/tokenize",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                               "Content-Type": "application/json"},
-                             queryParams = {
-                               "retina_name":self.retina,
-                               "POStags":None
-                               },
-                             postData=text)
-    self._writeToCache(cachePath, response.content, "tokens")
-
-    return [sentence.split(",") for sentence in response]
+    return self._queryAPI("POST",
+                          "/text/tokenize",
+                          {
+                            "retina_name":self.retina,
+                            "POStags":None
+                          },
+                          postData=text,
+                          headers={
+                            "Accept": "Application/json",
+                            "Content-Type": "application/json"
+                          })
 
 
-  def compare(self, bitmap1, bitmap2):
+  # NOTE: slice() does not yet work properly; cortical.io is working on it
+#  def slice(self, text):
+#    """
+#    Slice the text into meaningful sections; over a sequence of SDRs in a text,
+#    slices at significant changes in the meaning.
+#    
+#    Optional query params:
+#      - 'get_fingerprint': boolean, if the fingerprint should be returned with
+#      the results
+#    """
+#    response = self._queryAPI("POST", 
+#                              "/text/slices",
+#                              {
+#                                "retina_name":self.retina,
+#                                "start_index":0,
+#                                "max_results":10,
+#                                "get_fingerprint":False
+#                              },
+#                              postData=text,
+#                              headers={
+#                                "Accept": "Application/json",
+#                                "Content-Type": "application/json"
+#                              })
+##    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
+#    return json.loads(response.content)
+
+  
+  def compare(self, fingerprint1, fingerprint2):
     """
-    Given two bitmaps, return their comparison, i.e. a dict with the REST
-    comparison metrics. Here's an example return dict:
+    Given two fingerprints, return the comparison of their bitmaps.
+    
+    @params fingerprintX    (dict)      Fingerprint dictionary, as returned by
+                                        getBitmap().
+    @return                 (dict)      Dictionary of the REST comparison
+                                        metrics.
+    
+    Example return dict:
       {
-        "Cosine-Similarity": 0.6666666666666666,
-        "Euclidean-Distance": 0.3333333333333333,
-        "Jaccard-Distance": 0.5,
-        "Overlapping-all": 6,
-        "Overlapping-left-right": 0.6666666666666666,
-        "Overlapping-right-left": 0.6666666666666666,
-        "Size-left": 9,
-        "Size-right": 9,
-        "Weighted-Scoring": 0.4436476984102028
+        "cosineSimilarity": 0.6666666666666666,
+        "euclideanDistance": 0.3333333333333333,
+        "jaccardDistance": 0.5,
+        "overlappingAll": 6,
+        "overlappingLeftRight": 0.6666666666666666,
+        "overlappingRightLeft": 0.6666666666666666,
+        "sizeLeft": 9,
+        "sizeRight": 9,
+        "weightedScoring": 0.4436476984102028
       }
     """
-    
+    bitmap1 = fingerprint1["fingerprint"]["positions"]
+    bitmap2 = fingerprint2["fingerprint"]["positions"]
     data = json.dumps(
       [
         {"positions": bitmap1},
         {"positions": bitmap2}
       ]
     )
-    response = self._queryAPI(resourcePath="/compare",
-                             method="POST",
-                             headers={"Accept": "Application/json",
-                                      "Content-Type": "application/json"},
-                             queryParams = {"retina_name":self.retina},
-                             postData=data)
+    response = self._queryAPI("POST", 
+                              "/compare",
+                              {"retina_name":self.retina},
+                              postData=data,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
     
-    return json.loads(response.content)
+    return response
 
 
-  def getSdr(self, term):  ## TODO: move to utils (fluent utils?)
-    bitmap = self.getBitmap(term)
+  def getContext(self, term):
+    """
+    Get contexts for a given term. The context ids can be used as parameters in
+    bitmapToTerms().
+    
+    @return     (list)        A list of dictionaries, where the keys are
+                              'context_label', 'fingerprint' (the bitmap for the
+                              context label), and 'context_id'.
+    """
+    response = self._queryAPI("GET", 
+                              "/terms/contexts",
+                              {
+                                "retina_name":self.retina,
+                                "term":term,
+                                "start_index":0,
+                                "max_results":10,
+                                "get_fingerprint":False,
+                              },
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
+
+    return response
+  
+
+  def getSDR(self, bitmap):
+    """
+    Returns the SDR for the input bitmap. If interested in SDR for a given term,
+    first call getBitmap(term).
+    """
     size = bitmap["width"] * bitmap["height"]
-    positions = bitmap["positions"]
+    positions = bitmap["fingerprint"]["positions"]
     sdr = ""
     if len(positions) is 0:
       nextOn = None
