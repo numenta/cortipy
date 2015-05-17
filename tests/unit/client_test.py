@@ -313,6 +313,43 @@ class CorticalClientTestCase(unittest.TestCase):
   
   
   @httpretty.activate
+  def testCompareReturnsNull(self):
+    """
+    Tests client.Compare() catches a null response by the API.
+    """
+    # Arrange: mock JSON response from API, mock out the API endpoint we expect
+    # to be called, init identical FPs.
+    mockResponseString = ""
+    httpretty.register_uri(httpretty.POST,
+                           "http://api.cortical.io/rest/compare",
+                           body=mockResponseString,
+                           content_type="application/json")
+    fp1 = {"width":4,
+          "height":4,
+          "fingerprint":{"positions":[13,14]}
+          }
+    fp2 = {"width":4,
+          "height":4,
+          "fingerprint":{"positions":[1,2]}
+          }
+  
+    # Act: create the client object we'll be testing.
+    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    distances = client.compare(fp1, fp2)
+#    import pdb; pdb.set_trace()
+    # Assert: expected distance metrics are returned, and result should reflect
+    # minimum distances.
+    self.assertTrue({"overlappingAll", "euclideanDistance"} == set(distances),
+      "The returned dictionary does not contain the expected distance metrics.")
+    self.assertEqual(distances["euclideanDistance"], 1.0,
+      "Euclidean distance is incorrect. Expected 1.0 but received %0.1f"
+      % distances["euclideanDistance"])
+    self.assertEqual(distances["overlappingAll"], 0,
+      "Overlap count is incorrect. Expected 0 but received %d"
+      % distances["overlappingAll"])
+  
+
+  @httpretty.activate
   def testGetContextReturnFields(self):
     """
     Tests client.getContext() for a sample term.
