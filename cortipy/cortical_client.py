@@ -117,7 +117,7 @@ class CorticalClient():
                baseUrl=DEFAULT_BASE_URL,
                retina=DEFAULT_RETINA,
                cacheDir=DEFAULT_CACHE_DIR,
-               useCache=False,
+               useCache=True,
                verbosity=DEFAULT_VERBOSITY):
     # Instantiate API credentials.
     if apiKey:
