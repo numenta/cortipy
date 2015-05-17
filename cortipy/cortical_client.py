@@ -167,7 +167,7 @@ class CorticalClient():
     return responseObj
 
 
-  def _placeholderFingerprint(self, string, option):
+  def _placeholderFingerprint(self, string, option=random):
     """
     When the API returns a null fingerprint, fill with a random or empty bitmap.
     

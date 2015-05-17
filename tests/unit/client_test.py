@@ -422,5 +422,42 @@ class CorticalClientTestCase(unittest.TestCase):
       "[0000000000000000] but instead received [%s]" % sdr)
 
 
+  def testForUniquePlaceholderFingerprints(self):
+    """
+    Tests client._placeholderFingerprint() returns different random bitmaps for
+    different input terms.
+    """
+    # Arrange:
+    term1 = "Deckard"
+    term2 = "Holden"
+    
+    # Act:
+    client = cortipy.CorticalClient()
+    fp1 = client._placeholderFingerprint(term1, option="random")
+    fp2 = client._placeholderFingerprint(term2, option="random")
+  
+    # Assert:
+    self.assertNotEqual(fp1, fp2,
+      "The generated bitmaps are identical, but should be different.")
+    
+
+  def testForIdenticalPlaceholderFingerprints(self):
+    """
+    Tests client._placeholderFingerprint() returns the same bitmap for when
+    repeatedly called for the same input term.
+    """
+    # Arrange:
+    term = "Rosen"
+    
+    # Act:
+    client = cortipy.CorticalClient()
+    fp1 = client._placeholderFingerprint(term, option="random")
+    fp2 = client._placeholderFingerprint(term, option="random")
+  
+    # Assert:
+    self.assertEqual(fp1, fp2,
+      "The generated bitmaps are different, but should be identical.")
+
+
 if __name__ == '__main__':
   unittest.main()
