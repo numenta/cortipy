@@ -117,7 +117,7 @@ class CorticalClient():
                baseUrl=DEFAULT_BASE_URL,
                retina=DEFAULT_RETINA,
                cacheDir=DEFAULT_CACHE_DIR,
-               useCache=True,
+               useCache=False,
                verbosity=DEFAULT_VERBOSITY):
     # Instantiate API credentials.
     if apiKey:
@@ -160,7 +160,10 @@ class CorticalClient():
     if self.verbosity > 1:
       print "API Response content:"
       print response.content
-    responseObj = json.loads(response.content)
+    try:
+      responseObj = json.loads(response.content)
+    except:  # catch all
+      responseObj = []
     return responseObj
 
 
@@ -178,10 +181,9 @@ class CorticalClient():
       total = int(float(size["width"]) * float(size["height"]))
       state = random.getstate()
       random.seed(string)
-      fingerprint = random.sample(xrange(total), int(total*TARGET_SPARSITY))
+      bitmap = random.sample(xrange(total), int(total*TARGET_SPARSITY))
       random.setstate(state)
-      return {"positions":fingerprint}
-        ## TODO: test if these need to be sorted... if so, use fingerprint.sort()
+      return {"positions":sorted(bitmap)}
     else:
       return {"positions":[]}
 
@@ -308,11 +310,13 @@ class CorticalClient():
     return fpInfo
 
 
-  def bitmapToTerms(self, onBits):
+  def bitmapToTerms(self, onBits, numTerms=10):
     """
     For the given bitmap, returns the most likely terms for which it encodes.
     
     @param  onBits          (list)             Bitmap for a fingerprint.
+    @param  numTerms        (int)              The max number of terms to
+                                               return.
     @return similar         (list)             List of dictionaries, where keys
                                                are terms and likelihood scores.
     Optional query params:
@@ -333,7 +337,7 @@ class CorticalClient():
                               {
                                 "retina_name":self.retina,
                                 "start_index":0,
-                                "max_results":10,
+                                "max_results":numTerms,
                                 "get_fingerprint":False,
                                 "pos_type":None,
                                 "sparsity":TARGET_SPARSITY,
@@ -441,7 +445,7 @@ class CorticalClient():
         {"positions": bitmap2}
       ]
     )
-    response = self._queryAPI("POST", 
+    response = self._queryAPI("POST",
                               "/compare",
                               {"retina_name":self.retina},
                               postData=data,
@@ -449,7 +453,9 @@ class CorticalClient():
                                 "Accept": "Application/json",
                                 "Content-Type": "application/json"
                               })
-    
+    if response==[]:  # temporary b/c bugs in Cio API
+      print "Query response was null. Returning a filler object for compare()."
+      return {"euclideanDistance": 1.0, "overlappingAll": 0}
     return response
 
 
