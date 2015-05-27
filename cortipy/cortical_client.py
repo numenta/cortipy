@@ -212,7 +212,7 @@ class CorticalClient():
         % term)
 
     responseObj = self._queryAPI("GET",
-                                 "/terms", 
+                                 "/terms",
                                  {
                                    "retina_name": self.retina,
                                    "term": term,
@@ -453,6 +453,7 @@ class CorticalClient():
                                 "Accept": "Application/json",
                                 "Content-Type": "application/json"
                               })
+
     if response==[]:  # temporary b/c bugs in Cio API
       print "Query response was null. Returning a filler object for compare()."
       return {"euclideanDistance": 1.0, "overlappingAll": 0}

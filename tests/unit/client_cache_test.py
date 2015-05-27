@@ -51,7 +51,7 @@ class CorticalClientTestCase(unittest.TestCase):
 
   @patch.object(os, 'makedirs')
   def testConstructionDoesNotTouchFileSystem(self, mockMkdirs):
-    cortipy.CorticalClient()
+    cortipy.CorticalClient(apiKey="fakeKey")
     assert(mockMkdirs.call_count == 0)
 
 
@@ -80,7 +80,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=True):
       # Act.
-      client = cortipy.CorticalClient(useCache=True)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=True)
       client._queryAPI(method, resourcePath, queryParams, postData=postData)
 
     # Assert.
@@ -112,7 +112,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=False):
       # Act.
-      client = cortipy.CorticalClient(useCache=False)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=False)
       client._queryAPI(method, resourcePath, queryParams, postData=postData)
   
     # Assert.
@@ -154,7 +154,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=True):
       # Act.
-      client = cortipy.CorticalClient(useCache=True)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=True)
       client._queryAPI(method, resourcePath, queryParams, postData=postData)
     expectedCacheString = hashlib.sha224(json.dumps([
       resourcePath, method, json.dumps(queryParams), postData
@@ -202,7 +202,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=True):
       # Act.
-      client = cortipy.CorticalClient(useCache=True)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=True)
       client._queryAPI(method, resourcePath, queryParams, postData=postData)
     
     expectedCacheString = hashlib.sha224(json.dumps([
@@ -237,7 +237,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=True):
       # Act.
-      client = cortipy.CorticalClient(useCache=False)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=False)
       client._queryAPI(method, resourcePath, queryParams, postData=postData)
     
     # Assert.
@@ -262,7 +262,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Patching file open
     with patch('__builtin__.open', mockOpen, create=True):
       # Act.
-      client = cortipy.CorticalClient(useCache=True)
+      client = cortipy.CorticalClient(apiKey="fakeKey", useCache=True)
       result = client._queryAPI(
         method, resourcePath, queryParams, postData=postData)
     
@@ -295,7 +295,7 @@ class CorticalClientTestCase(unittest.TestCase):
     queryParams = "mock queryParams"
     postData = "mock postData"
   
-    client = cortipy.CorticalClient(useCache=False)
+    client = cortipy.CorticalClient(apiKey="fakeKey", useCache=False)
     client._queryAPI(method, resourcePath, queryParams, postData=postData)
   
     # Assert.
