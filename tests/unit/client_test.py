@@ -46,7 +46,7 @@ class CorticalClientTestCase(unittest.TestCase):
 
 
   def testWhenConstructingClientProperDefaultPropertiesAreSet(self):
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     
     self.assertEqual(client.apiUrl, "http://api.cortical.io/rest",
       "Wrong default API URL")
@@ -68,9 +68,10 @@ class CorticalClientTestCase(unittest.TestCase):
     """
     # Arrange: patch the request in cortipy.CorticalClient._queryAPI().
     # with patch.object(requests, 'get', return_value=) as mock_get:
-    mockGet.return_value = Mock(content='{"dummy": "mock body"}', status_code=200)
+    mockGet.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=200)
     # Act:
-    client = cortipy.CorticalClient(useCache=False)
+    client = cortipy.CorticalClient(apiKey="fakeKey", useCache=False)
     response = client._queryAPI("GET", "/path", {})
     
     # Assert:
@@ -83,10 +84,11 @@ class CorticalClientTestCase(unittest.TestCase):
     Tests the client can send a 'POST' query to the API, asserting we receive
     an HTTP status code reflecting successful operation.
     """
-    mockPost.return_value = Mock(content='{"dummy": "mock body"}', status_code=200)
+    mockPost.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=200)
     
     # Act:
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     response = client._queryAPI("POST", "path", {})
     
     # Assert:
@@ -109,7 +111,7 @@ class CorticalClientTestCase(unittest.TestCase):
                            
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
-      verbosity=0, useCache=False, retina="en_synonymous")
+      apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
     bitmap = client.getBitmap("owl")
   
     # Assert: check the result object.
@@ -157,7 +159,7 @@ class CorticalClientTestCase(unittest.TestCase):
                            
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
-      verbosity=0, useCache=False, retina="en_synonymous")
+      apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
     bitmap = client.getTextBitmap("do androids dream of electric sheep")
   
     # Assert: check the result object.
@@ -206,7 +208,8 @@ class CorticalClientTestCase(unittest.TestCase):
           }
   
     # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False)
     distances = client.compare(fp1, fp2)
     
     # Assert: expected distance metrics are returned, and result should reflect
@@ -247,7 +250,8 @@ class CorticalClientTestCase(unittest.TestCase):
           }
   
     # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False)
     distances = client.compare(fp1, fp2)
     
     # Assert: expected distance metrics are returned, and result should reflect
@@ -266,7 +270,7 @@ class CorticalClientTestCase(unittest.TestCase):
   
   
   @httpretty.activate
-  def testCompareSimilarFPs(self): ## TODO: rearrange for more clear AAA???
+  def testCompareSimilarFPs(self):
     """
     Tests client.Compare() for similar SDRs, with overlapping bits, and for
     dissimilar SDRs, asserting the method returns distances reflecting the
@@ -294,7 +298,8 @@ class CorticalClientTestCase(unittest.TestCase):
           }
   
     # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False)
     distances_similar = client.compare(fp1, fp2)
     
     httpretty.register_uri(httpretty.POST,
@@ -334,9 +339,10 @@ class CorticalClientTestCase(unittest.TestCase):
           }
   
     # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False)
     distances = client.compare(fp1, fp2)
-#    import pdb; pdb.set_trace()
+
     # Assert: expected distance metrics are returned, and result should reflect
     # minimum distances.
     self.assertTrue({"overlappingAll", "euclideanDistance"} == set(distances),
@@ -365,7 +371,8 @@ class CorticalClientTestCase(unittest.TestCase):
                            content_type="application/json")
     
     # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(verbosity=0, useCache=False)
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False)
     contexts = client.getContext("android")
     
     # Assert: check the result object.
@@ -391,7 +398,7 @@ class CorticalClientTestCase(unittest.TestCase):
           "fingerprint":{"positions":[0,13]}
           }
     # Act:
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     sdr = client.getSDR(fp)
     
     # Assert:
@@ -412,7 +419,7 @@ class CorticalClientTestCase(unittest.TestCase):
           "fingerprint":{"positions":[]}
           }
     # Act:
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     sdr = client.getSDR(fp)
     
     # Assert:
@@ -432,7 +439,7 @@ class CorticalClientTestCase(unittest.TestCase):
     term2 = "Holden"
     
     # Act:
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     fp1 = client._placeholderFingerprint(term1, option="random")
     fp2 = client._placeholderFingerprint(term2, option="random")
   
@@ -450,7 +457,7 @@ class CorticalClientTestCase(unittest.TestCase):
     term = "Rosen"
     
     # Act:
-    client = cortipy.CorticalClient()
+    client = cortipy.CorticalClient(apiKey="fakeKey")
     fp1 = client._placeholderFingerprint(term, option="random")
     fp2 = client._placeholderFingerprint(term, option="random")
   
