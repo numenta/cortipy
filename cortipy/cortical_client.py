@@ -328,7 +328,7 @@ class CorticalClient():
       raise Exception("Cannot convert empty bitmap to term!")
     
     # Each list of similar terms has a unique cache location:
-    data = json.dumps({"positions": onBits})
+    dumpedData = json.dumps({"positions": onBits})
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
     
@@ -343,7 +343,7 @@ class CorticalClient():
                                 "sparsity":TARGET_SPARSITY,
                                 "context_id":None
                               },
-                              postData=data,
+                              postData=dumpedData,
                               headers={
                                 "Accept": "Application/json",
                                 "Content-Type": "application/json"
@@ -439,7 +439,7 @@ class CorticalClient():
     """
     bitmap1 = fingerprint1["fingerprint"]["positions"]
     bitmap2 = fingerprint2["fingerprint"]["positions"]
-    data = json.dumps(
+    dumpedData = json.dumps(
       [
         {"positions": bitmap1},
         {"positions": bitmap2}
@@ -448,7 +448,7 @@ class CorticalClient():
     response = self._queryAPI("POST",
                               "/compare",
                               {"retina_name":self.retina},
-                              postData=data,
+                              postData=dumpedData,
                               headers={
                                 "Accept": "Application/json",
                                 "Content-Type": "application/json"
@@ -485,6 +485,46 @@ class CorticalClient():
 
     return response
   
+
+  def createClassification(self, category, positives, negatives=[]):
+    """
+    Create a 'category filter' fingerprint with positive (and negative) examples
+    that would fit (or not fit) into the category.
+
+    @param positives      (list)        Positive example strings; fit into this
+                                        category.
+    @param negatives      (list)        Negative example strings; specifically 
+                                        do not fit into this category.
+
+    @return               (dict)        Dictionary object with fields to
+                                        describe the returned fingerprint:
+                                        - 'categoryName': category string
+                                        - 'positions': fingerprint bitmap (list
+                                          of ON bit positions)
+    """
+    positiveExamples = []
+    negativeExamples = []
+    [positiveExamples.append({"text":p}) for p in positives]
+    [negativeExamples.append({"text":n}) for n in negatives]
+    dumpedData=json.dumps(
+      {"positiveExamples":positiveExamples, 
+       "negativeExamples":negativeExamples}
+    )
+    
+    response = self._queryAPI("POST",
+                              "/classify/create_category_filter",
+                              {
+                                "retina_name": self.retina,
+                                "filter_name": category
+                              },
+                              postData=dumpedData,
+                              headers={
+                                "Accept": "Application/json",
+                                "Content-Type": "application/json"
+                              })
+
+    return response
+
 
   def getSDR(self, bitmap):
     """
