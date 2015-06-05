@@ -359,7 +359,7 @@ class CorticalClientTestCase(unittest.TestCase):
   def testGetContextReturnFields(self):
     """
     Tests client.getContext() for a sample term.
-    Asserts the returned object contains the corrcet fields and have contents as
+    Asserts the returned object contains the correct fields and have contents as
     expected.
     """
     # Arrange: mock JSON response from API, mock out the API endpoint we expect
@@ -386,6 +386,61 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual(contexts[0]["context_id"], 0,
       "The top context does not have ID of zero.")
   
+
+  @httpretty.activate
+  def testCreateClassification(self):
+    """
+    Tests client.createClassification(). Asserts the returned object has fields
+    with expected values for both the classifciation name and bitmap.
+    """
+    # Arrange: mock JSON response from API, mock out the API endpoint we expect
+    # to be called.
+    mockResponseString = getMockApiData("dfw_category.json")
+    httpretty.register_uri(
+      httpretty.POST, 
+      "http://api.cortical.io/rest/classify/create_category_filter",
+      body=mockResponseString,
+      content_type="application/json")
+                           
+    # Act: create the client object we'll be testing.
+    client = cortipy.CorticalClient(
+      apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
+    positives = ["The truth will set you free. But not until it is finished \
+      with you.", "You will become way less concerned with what other people \
+      think of you when you realize how seldom they do."]
+    negatives = ["It was the best of times, it was the worst of times, it was \
+      the age of wisdom, it was the age of foolishness, it was the epoch of \
+      belief, it was the epoch of incredulity, it was the season of Light, \
+      it was the season of Darkness, it was the spring of hope, it was the \
+      winter of despair, we had everything before us, we had nothing before \
+      us, we were all going direct to Heaven, we were all going direct the \
+      other way -- in short, the period was so far like the present period, \
+      that some of its noisiest authorities insisted on its being received, \
+      for good or for evil, in the superlative degree of comparison only."]
+    response = client.createClassification("dfw", positives, negatives)
+  
+    # Assert: check the result object.
+    self.assertTrue("positions" in response,
+      "No \'positions\' field in the returned object.")
+    self.assertTrue("categoryName" in response,
+      "No \'categoryName\' field in the returned object.")
+
+    self.assertEqual(response["categoryName"], "dfw",
+      "The returned category name is incorrect.")
+    self.assertIsInstance(response["positions"], list,
+      "The returned object does not contain a \'positions\' list.")
+    
+    # Assert: get the request sent to the API and check it.
+    request = httpretty.last_request()
+    self.assertEqual(request.method, 'POST', "Incorrect request method.")
+    self.assertEqual(request.headers['content-type'], 'application/json',
+      "Incorrect request headers.")
+    self.assertTrue(hasattr(request, 'querystring'),
+      "The request field \'queryString\' does not exist")
+    self.assertEqual(request.querystring, {"retina_name": ["en_synonymous"],
+                                           "filter_name": ["dfw"]},
+      "The request field \'queryString\' does not have the expected values.")
+
   
   def testGetSDRFromFingerprint(self):
     """
