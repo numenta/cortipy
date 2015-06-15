@@ -132,7 +132,7 @@ class CorticalClient():
 
 
   @cacheDecorator
-  def _queryAPI(self, method, resourcePath, queryParams, 
+  def _queryAPI(self, method, resourcePath, queryParams,
                 postData=None, headers=None):
     url = self.apiUrl + resourcePath
     if headers is None:
@@ -153,10 +153,10 @@ class CorticalClient():
       response = requests.post(
         url, params=queryParams, headers=headers, data=postData)
     else:
-      raise Exception('Method ' + method + ' is not recognized.')
+      raise ValueError('Method ' + method + ' is not recognized.')
     if response.status_code != 200:
-      raise Exception("Response " + str(response.status_code)
-                      + ": " + response.content)
+      raise requests.HTTPError("Response " + str(response.status_code)
+                                + ": " + response.content)
     if self.verbosity > 1:
       print "API Response content:"
       print response.content
@@ -170,7 +170,7 @@ class CorticalClient():
   def _placeholderFingerprint(self, string, option=random):
     """
     When the API returns a null fingerprint, fill with a random or empty bitmap.
-    
+
     We seed the random number generator such that a given string will yield the
     same fingerprint each time this function is called.
     Saving the internal state of the generator reduces the likelihood of
@@ -190,9 +190,9 @@ class CorticalClient():
 
   def getBitmap(self, term):
     """
-    For the input term, return the fingerprint info; either from cache or the 
+    For the input term, return the fingerprint info; either from cache or the
     REST API.
-    
+
     @param  term       (string)     A single token.
     @return fpInfo     (dict)       Dictionary object with fields to describe
                                     the returned fingerprint:
@@ -219,7 +219,7 @@ class CorticalClient():
                                    "start_index": 0,
                                    "max_results": 10,
                                    "get_fingerprint": True
-                                 }, 
+                                 },
                                  headers={
                                    "Accept": "Application/json",
                                    "Content-Type": "application/json"
@@ -239,7 +239,7 @@ class CorticalClient():
       fpInfo["term"] = term
       fpInfo["fingerprint"] = self._placeholderFingerprint(
         term, DEFAULT_FILL_SDR)
-    
+
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
       size = RETINA_SIZES[self.retina]
@@ -257,7 +257,7 @@ class CorticalClient():
     """
     For the input string of terms, return the fingerprint info; either from
     cache or the REST API.
-    
+
     @param  term       (string)     A string of multiple tokens.
     @return fpInfo     (dict)       Dictionary object with fields to describe
                                     the returned fingerprint:
@@ -270,17 +270,17 @@ class CorticalClient():
                                         'positions' of ON bits
                                       - 'pos_types': list of parts of speech
     """
-    responseObj = self._queryAPI("POST", 
-                                 "/text", 
+    responseObj = self._queryAPI("POST",
+                                 "/text",
                                  {
                                    "retina_name": self.retina
-                                 }, 
+                                 },
                                  postData=string,
                                  headers={
                                    "Accept": "Application/json",
                                    "Content-Type": "application/json"
                                  })
-    
+
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
@@ -292,7 +292,7 @@ class CorticalClient():
               % (string, string))
       fpInfo["positions"] = self._placeholderFingerprint(
         string, DEFAULT_FILL_SDR)
-    
+
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
       size = RETINA_SIZES[self.retina]
@@ -313,7 +313,7 @@ class CorticalClient():
   def bitmapToTerms(self, onBits, numTerms=10):
     """
     For the given bitmap, returns the most likely terms for which it encodes.
-    
+
     @param  onBits          (list)             Bitmap for a fingerprint.
     @param  numTerms        (int)              The max number of terms to
                                                return.
@@ -321,19 +321,19 @@ class CorticalClient():
                                                are terms and likelihood scores.
     Optional query params:
       - 'pos_type': what part of speech (e.g. 'NOUN') to return
-      - 'context_id': id returned by getContext, specifying the context of the 
+      - 'context_id': id returned by getContext, specifying the context of the
         returned terms
     """
     if len(onBits) is 0:
       raise Exception("Cannot convert empty bitmap to term!")
-    
+
     # Each list of similar terms has a unique cache location:
     data = json.dumps({"positions": onBits})
     if self.verbosity > 0:
       print "\tfetching similar terms from REST API"
-    
-    responseObj = self._queryAPI("POST", 
-                              "/expressions/similar_terms", 
+
+    responseObj = self._queryAPI("POST",
+                              "/expressions/similar_terms",
                               {
                                 "retina_name":self.retina,
                                 "start_index":0,
@@ -361,17 +361,17 @@ class CorticalClient():
     """Get a list of sentence tokens from a text string. Non-alphanumeric and
     end-of-sentence characters are exlcuded. Only returns terms found in the
     corpus.
-    
+
     @param text     (str)               Text string to tokenize
     @return         (list)              List where each entry contains the
                                         string tokens from a sentence in the
                                         input text
-    
+
     Example:
       >>> c = cortipy.CorticalClient(apiKey)
       >>> c.tokenize("This is Deckard. How much is an electric ostrich?")
       ['this,is,deckard', 'how,much,is,an,electric,ostrich']
-    
+
     Optional query params:
       - 'POStags': tokenizer will only return the specified parts of speech
     """
@@ -393,12 +393,12 @@ class CorticalClient():
 #    """
 #    Slice the text into meaningful sections; over a sequence of SDRs in a text,
 #    slices at significant changes in the meaning.
-#    
+#
 #    Optional query params:
 #      - 'get_fingerprint': boolean, if the fingerprint should be returned with
 #      the results
 #    """
-#    response = self._queryAPI("POST", 
+#    response = self._queryAPI("POST",
 #                              "/text/slices",
 #                              {
 #                                "retina_name":self.retina,
@@ -414,16 +414,16 @@ class CorticalClient():
 ##    import pdb; pdb.set_trace()  ## TODO: investigate returns slices as expected
 #    return json.loads(response.content)
 
-  
+
   def compare(self, fingerprint1, fingerprint2):
     """
     Given two fingerprints, return the comparison of their bitmaps.
-    
+
     @params fingerprintX    (dict)      Fingerprint dictionary, as returned by
                                         getBitmap().
     @return                 (dict)      Dictionary of the REST comparison
                                         metrics.
-    
+
     Example return dict:
       {
         "cosineSimilarity": 0.6666666666666666,
@@ -464,12 +464,12 @@ class CorticalClient():
     """
     Get contexts for a given term. The context ids can be used as parameters in
     bitmapToTerms().
-    
+
     @return     (list)        A list of dictionaries, where the keys are
                               'context_label', 'fingerprint' (the bitmap for the
                               context label), and 'context_id'.
     """
-    response = self._queryAPI("GET", 
+    response = self._queryAPI("GET",
                               "/terms/contexts",
                               {
                                 "retina_name":self.retina,
@@ -484,7 +484,7 @@ class CorticalClient():
                               })
 
     return response
-  
+
 
   def getSDR(self, bitmap):
     """
