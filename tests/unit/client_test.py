@@ -94,7 +94,43 @@ class CorticalClientTestCase(unittest.TestCase):
     # Assert:
     self.assertEqual({"dummy": "mock body"}, response)
   
-  
+
+  @patch.object(requests, 'post')
+  def testBadQueryMethodToAPI(self, mockPost):
+    """
+    Tests the client sending an invalid query method to the API, asserting we
+    receive a RequestMethodError.
+    """
+    mockPost.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=None)
+    
+    # Act:
+    client = cortipy.CorticalClient(apiKey="fakeKey")
+    try:
+      response = client._queryAPI("BAD_METHOD", "path", {})
+    except Exception as e:
+      # Assert:
+      self.assertEqual("RequestMethodError", type(e).__name__)
+
+
+  @patch.object(requests, 'get')
+  def testQueryResponseError(self, mockPost):
+    """
+    Tests the client receiving an HTTP error code from the API, asserting we
+    receive a RequestMethodError.
+    """
+    mockPost.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=400)
+    
+    # Act:
+    client = cortipy.CorticalClient(apiKey="fakeKey")
+    try:
+      response = client._queryAPI("GET", "path", {})
+    except Exception as e:
+      # Assert:
+      self.assertEqual("HTTPStatusCodeError", type(e).__name__)
+
+
   @httpretty.activate
   def testGetBitmap(self):
     """
