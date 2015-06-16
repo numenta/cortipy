@@ -30,8 +30,7 @@ Then, set up the following environment variables with your REST API credentials:
 	pos = [
 		"Always code as if the guy who ends up maintaining your code will be a violent psychopath who knows where you live.",
       	"To iterate is human, to recurse divine.",
-	    "First learn computer science and all the theory. Next develop a programming style. Then forget all that and just hack.",
-	    "Beautiful is better than ugly."
+	    "First learn computer science and all the theory. Next develop a programming style. Then forget all that and just hack."
 	    ]
 	neg = [
 		"To err is human, to forgive divine."
