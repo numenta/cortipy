@@ -28,8 +28,8 @@ class CioAPIError(Exception):
 
 
 
-class HTTPStatusCodeError(CioAPIError):
-  """Raise when the API returns an error HTTP status code."""
+class UnsuccessfulEncodingError(CioAPIError):
+  """Raise when the API is unable to return a representation for the data."""
 
 
 

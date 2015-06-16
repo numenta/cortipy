@@ -25,7 +25,7 @@ import os
 import random
 import requests
 
-from cortipy.exceptions import HTTPStatusCodeError, RequestMethodError
+from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
 from functools import wraps
 
 try:
@@ -156,7 +156,7 @@ class CorticalClient():
     else:
       raise RequestMethodError('Method ' + method + ' is not recognized.')
     if response.status_code != 200:
-      raise HTTPStatusCodeError("Response " + str(response.status_code)
+      raise UnsuccessfulEncodingError("Response " + str(response.status_code)
                                + ": " + response.content)
     if self.verbosity > 1:
       print "API Response content:"

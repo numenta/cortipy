@@ -114,10 +114,10 @@ class CorticalClientTestCase(unittest.TestCase):
 
 
   @patch.object(requests, 'get')
-  def testQueryResponseError(self, mockPost):
+  def testAPICannotEncodeError(self, mockPost):
     """
     Tests the client receiving an HTTP error code from the API, asserting we
-    receive a RequestMethodError.
+    receive a UnsuccessfulEncodingError.
     """
     mockPost.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=400)
@@ -128,7 +128,7 @@ class CorticalClientTestCase(unittest.TestCase):
       response = client._queryAPI("GET", "path", {})
     except Exception as e:
       # Assert:
-      self.assertEqual("HTTPStatusCodeError", type(e).__name__)
+      self.assertEqual("UnsuccessfulEncodingError", type(e).__name__)
 
 
   @httpretty.activate
