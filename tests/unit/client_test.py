@@ -110,7 +110,7 @@ class CorticalClientTestCase(unittest.TestCase):
 
     # Assert:
     with self.assertRaises(RequestMethodError):
-      _ = client._queryAPI("BAD_METHOD", "path", {})
+      client._queryAPI("BAD_METHOD", "path", {})
 
 
   @patch.object(requests, "get")
@@ -127,7 +127,7 @@ class CorticalClientTestCase(unittest.TestCase):
     
     # Assert:
     with self.assertRaises(UnsuccessfulEncodingError):
-      _ = client._queryAPI("GET", "path", {})
+      client._queryAPI("GET", "path", {})
 
 
   @httpretty.activate
