@@ -198,14 +198,8 @@ class CorticalClientTestCase(unittest.TestCase):
                            "http://api.cortical.io/rest/compare",
                            body=mockResponseString,
                            content_type="application/json")
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,13]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,13]}
-          }
+    fp1 = [0,13]
+    fp2 = [0,13]
   
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
@@ -240,14 +234,8 @@ class CorticalClientTestCase(unittest.TestCase):
                            "http://api.cortical.io/rest/compare",
                            body=mockResponseString,
                            content_type="application/json")
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[15]}
-          }
+    fp1 = [0]
+    fp2 = [13]
   
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
@@ -284,18 +272,9 @@ class CorticalClientTestCase(unittest.TestCase):
                            "http://api.cortical.io/rest/compare",
                            body=mockResponseStringSimilar,
                            content_type="application/json")
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[0,1]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[1,3]}
-          }
-    fp3 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[10,11]}
-          }
+    fp1 = [0,1]
+    fp2 = [1,3]
+    fp3 = [10,11]
   
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
@@ -315,45 +294,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertTrue((distances_similar["overlappingAll"] >
             distances_dissimilar["overlappingAll"]), ("Overlap for dissimilar "
             "SDRs is incorrectly less than that of similar SDRs."))
-  
-  
-  @httpretty.activate
-  def testCompareReturnsNull(self):
-    """
-    Tests client.Compare() catches a null response by the API.
-    """
-    # Arrange: mock JSON response from API, mock out the API endpoint we expect
-    # to be called, init identical FPs.
-    mockResponseString = ""
-    httpretty.register_uri(httpretty.POST,
-                           "http://api.cortical.io/rest/compare",
-                           body=mockResponseString,
-                           content_type="application/json")
-    fp1 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[13,14]}
-          }
-    fp2 = {"width":4,
-          "height":4,
-          "fingerprint":{"positions":[1,2]}
-          }
-  
-    # Act: create the client object we'll be testing.
-    client = cortipy.CorticalClient(
-      apiKey="fakeKey", verbosity=0, useCache=False)
-    distances = client.compare(fp1, fp2)
 
-    # Assert: expected distance metrics are returned, and result should reflect
-    # minimum distances.
-    self.assertTrue({"overlappingAll", "euclideanDistance"} == set(distances),
-      "The returned dictionary does not contain the expected distance metrics.")
-    self.assertEqual(distances["euclideanDistance"], 1.0,
-      "Euclidean distance is incorrect. Expected 1.0 but received %0.1f"
-      % distances["euclideanDistance"])
-    self.assertEqual(distances["overlappingAll"], 0,
-      "Overlap count is incorrect. Expected 0 but received %d"
-      % distances["overlappingAll"])
-  
 
   @httpretty.activate
   def testGetContextReturnFields(self):

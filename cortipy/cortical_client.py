@@ -414,12 +414,14 @@ class CorticalClient():
   #   return json.loads(response.content)
 
 
-  def compare(self, text1, text2):
+  def compare(self, bitmap1, bitmap2):
     """
-    Given two strings, return their comparison for several distance metrics.
+    Given two bitmaps, return their comparison for several distance metrics.
+    Bitmaps that to be compared can be returned from getBitmap(),
+    getTextBitmap(), and createClassification().
 
-    @params textX           (str)       Word or words to compare.
-    @return                 (dict)      Dictionary of the REST comparison
+    @params bitmap          (list)      Bitmap to compare.
+    @return                 (dict)      Dictionary of the API's comparison
                                         metrics.
 
     Example return dict:
@@ -435,11 +437,9 @@ class CorticalClient():
         "weightedScoring": 0.4436476984102028
       }
     """
-    endpoint1 = "text" if len(text1.split(' ')) > 1 else "term"
-    endpoint2 = "text" if len(text2.split(' ')) > 1 else "term"
     dumpedData = json.dumps([
-                              {endpoint1:text1},
-                              {endpoint2:text2}
+                              {"positions":bitmap1},
+                              {"positions":bitmap2}
                             ])
     responseObj = self._queryAPI("POST",
                                 "/compare",
@@ -450,9 +450,6 @@ class CorticalClient():
                                   "Content-Type": "application/json"
                                 })
 
-    # if responseObj==[]:  # temporary b/c bugs in Cio API
-    #   print "Query response was null. Returning a filler object for compare()."
-    #   return {"euclideanDistance": 1.0, "overlappingAll": 0}
     return responseObj
 
 
