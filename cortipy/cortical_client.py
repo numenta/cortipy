@@ -154,10 +154,10 @@ class CorticalClient():
       response = requests.post(
         url, params=queryParams, headers=headers, data=postData)
     else:
-      raise RequestMethodError('Method ' + method + ' is not recognized.')
+      raise RequestMethodError("Method " + method + " is not recognized.")
     if response.status_code != 200:
-      raise UnsuccessfulEncodingError("Response " + str(response.status_code)
-                               + ": " + response.content)
+      raise UnsuccessfulEncodingError(
+        "Response " + str(response.status_code) + ": " + response.content)
     if self.verbosity > 1:
       print "API Response content:"
       print response.content

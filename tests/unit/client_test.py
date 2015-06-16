@@ -26,6 +26,7 @@ import os
 import requests
 import unittest2 as unittest
 
+from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
 from mock import Mock, patch
 
 
@@ -60,7 +61,7 @@ class CorticalClientTestCase(unittest.TestCase):
       "Wrong default cache on/off setting")
     
 
-  @patch.object(requests, 'get')
+  @patch.object(requests, "get")
   def testGetQueryToAPI(self, mockGet):
     """
     Tests the client can send a 'GET' query to the API, asserting we receive
@@ -78,7 +79,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual({"dummy": "mock body"}, response)
   
   
-  @patch.object(requests, 'post')
+  @patch.object(requests, "post")
   def testPostQueryToAPI(self, mockPost):
     """
     Tests the client can send a 'POST' query to the API, asserting we receive
@@ -95,7 +96,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual({"dummy": "mock body"}, response)
   
 
-  @patch.object(requests, 'post')
+  @patch.object(requests, "post")
   def testBadQueryMethodToAPI(self, mockPost):
     """
     Tests the client sending an invalid query method to the API, asserting we
@@ -106,14 +107,13 @@ class CorticalClientTestCase(unittest.TestCase):
     
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
-    try:
+
+    # Assert:
+    with self.assertRaises(RequestMethodError):
       response = client._queryAPI("BAD_METHOD", "path", {})
-    except Exception as e:
-      # Assert:
-      self.assertEqual("RequestMethodError", type(e).__name__)
 
 
-  @patch.object(requests, 'get')
+  @patch.object(requests, "get")
   def testAPICannotEncodeError(self, mockPost):
     """
     Tests the client receiving an HTTP error code from the API, asserting we
@@ -124,11 +124,10 @@ class CorticalClientTestCase(unittest.TestCase):
     
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
-    try:
+    
+    # Assert:
+    with self.assertRaises(UnsuccessfulEncodingError):
       response = client._queryAPI("GET", "path", {})
-    except Exception as e:
-      # Assert:
-      self.assertEqual("UnsuccessfulEncodingError", type(e).__name__)
 
 
   @httpretty.activate
