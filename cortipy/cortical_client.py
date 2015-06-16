@@ -323,7 +323,7 @@ class CorticalClient():
         returned terms
     """
     if len(onBits) is 0:
-      raise Exception("Cannot convert empty bitmap to term!")
+      raise ValueError("Cannot convert empty bitmap to term!")
 
     # Each list of similar terms has a unique cache location:
     dumpedData = json.dumps({"positions": onBits})
