@@ -25,6 +25,7 @@ import os
 import random
 import requests
 
+from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
 from functools import wraps
 
 try:
@@ -153,16 +154,16 @@ class CorticalClient():
       response = requests.post(
         url, params=queryParams, headers=headers, data=postData)
     else:
-      raise Exception('Method ' + method + ' is not recognized.')
+      raise RequestMethodError("Method " + method + " is not recognized.")
     if response.status_code != 200:
-      raise Exception("Response " + str(response.status_code)
-                      + ": " + response.content)
+      raise UnsuccessfulEncodingError(
+        "Response " + str(response.status_code) + ": " + response.content)
     if self.verbosity > 1:
       print "API Response content:"
       print response.content
     try:
       responseObj = json.loads(response.content)
-    except:  # catch all
+    except ValueError("Could not decode the query response."):
       responseObj = []
     return responseObj
 

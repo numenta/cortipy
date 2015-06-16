@@ -26,6 +26,7 @@ import os
 import requests
 import unittest2 as unittest
 
+from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
 from mock import Mock, patch
 
 
@@ -60,7 +61,7 @@ class CorticalClientTestCase(unittest.TestCase):
       "Wrong default cache on/off setting")
     
 
-  @patch.object(requests, 'get')
+  @patch.object(requests, "get")
   def testGetQueryToAPI(self, mockGet):
     """
     Tests the client can send a 'GET' query to the API, asserting we receive
@@ -78,7 +79,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual({"dummy": "mock body"}, response)
   
   
-  @patch.object(requests, 'post')
+  @patch.object(requests, "post")
   def testPostQueryToAPI(self, mockPost):
     """
     Tests the client can send a 'POST' query to the API, asserting we receive
@@ -94,7 +95,41 @@ class CorticalClientTestCase(unittest.TestCase):
     # Assert:
     self.assertEqual({"dummy": "mock body"}, response)
   
-  
+
+  @patch.object(requests, "post")
+  def testBadQueryMethodToAPI(self, mockPost):
+    """
+    Tests the client sending an invalid query method to the API, asserting we
+    receive a RequestMethodError.
+    """
+    mockPost.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=None)
+    
+    # Act:
+    client = cortipy.CorticalClient(apiKey="fakeKey")
+
+    # Assert:
+    with self.assertRaises(RequestMethodError):
+      _ = client._queryAPI("BAD_METHOD", "path", {})
+
+
+  @patch.object(requests, "get")
+  def testAPICannotEncodeError(self, mockPost):
+    """
+    Tests the client receiving an HTTP error code from the API, asserting we
+    receive a UnsuccessfulEncodingError.
+    """
+    mockPost.return_value = Mock(
+      content='{"dummy": "mock body"}', status_code=400)
+    
+    # Act:
+    client = cortipy.CorticalClient(apiKey="fakeKey")
+    
+    # Assert:
+    with self.assertRaises(UnsuccessfulEncodingError):
+      _ = client._queryAPI("GET", "path", {})
+
+
   @httpretty.activate
   def testGetBitmap(self):
     """
