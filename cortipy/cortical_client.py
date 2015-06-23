@@ -414,6 +414,26 @@ class CorticalClient():
   #   return json.loads(response.content)
 
 
+  def extractKeywords(self, text):
+    """
+    Get a list of keywords extracted from the text
+    @param text     (str)               Text string to get keywords
+    @return         (list)              List where each entry contains a keyword
+    """
+    responseObj = self._queryAPI("POST",
+                                "/text/keywords",
+                                {
+                                  "retina_name":self.retina
+                                },
+                                postData=text,
+                                headers={
+                                  "Accept": "Application/json",
+                                  "Content-Type": "application/json"
+                                })
+
+    return responseObj
+
+
   def compare(self, bitmap1, bitmap2):
     """
     Given two bitmaps, return their comparison for several distance metrics.
