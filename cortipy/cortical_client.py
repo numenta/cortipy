@@ -225,7 +225,6 @@ class CorticalClient():
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
-      print "no FP for ", term
       fpInfo = {}
       if self.verbosity > 0:
         print ("\tAPI could not return info for the text \'%s\'. Perhaps the "
