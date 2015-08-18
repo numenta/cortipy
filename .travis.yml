@@ -9,7 +9,7 @@ install:
 script:
  # Run integration tests locally since they require a Cortical.io API key
  - cd tests/unit/
- - py.test --cov .
+ - py.test --cov ../../cortipy .
 
 after_success:
  - pip install python-coveralls
