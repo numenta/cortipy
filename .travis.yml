@@ -8,7 +8,7 @@ install:
 
 script:
  - cd tests/unit/
- - py.test --cov .
+ - py.test --cov ../../cortipy .
 
 after_success:
  - pip install python-coveralls
