@@ -44,17 +44,17 @@ class GetTextBitmapTest(unittest.TestCase):
     self.assertIsInstance(bitmap, dict,
         "The returned object is not a dictionary")
     self.assertIn("text", bitmap,
-      "No \'term\' field in the returned object.")
+        "No \'term\' field in the returned object.")
     self.assertEqual(bitmap["text"], text,
-      "The returned term is incorrect.")
+        "The returned term is incorrect.")
     self.assertIsInstance(bitmap["fingerprint"], dict,
-      "The returned object does not contain a \'fingerprint'\ dictionary.")
+        "The returned object does not contain a \'fingerprint'\ dictionary.")
     self.assertIn("positions", bitmap["fingerprint"],
-      "The returned object does not contain a \'positions\' field for the "
-      "\'fingerprint\'.")
+        "The returned object does not contain a \'positions\' field for the "
+        "\'fingerprint\'.")
     self.assertIsInstance(bitmap["fingerprint"]["positions"], list,
-      "The returned object does not contain a \'positions\' list within its "
-      " \'fingerprint\' dictionary.")
+        "The returned object does not contain a \'positions\' list within its "
+        " \'fingerprint\' dictionary.")
 
 
 

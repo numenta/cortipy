@@ -77,14 +77,14 @@ class CreateClassificationTest(unittest.TestCase):
   def _checkValidResponse(self, response, name):
     # Assert: check the result object.
     self.assertIn("positions", response,
-      "No \'positions\' field in the returned object.")
+        "No \'positions\' field in the returned object.")
     self.assertIn("categoryName", response,
-      "No \'categoryName\' field in the returned object.")
+        "No \'categoryName\' field in the returned object.")
 
     self.assertEqual(response["categoryName"], name,
-      "The returned category name is incorrect.")
+        "The returned category name is incorrect.")
     self.assertIsInstance(response["positions"], list,
-      "The returned object does not contain a \'positions\' list.")
+        "The returned object does not contain a \'positions\' list.")
 
 
 
