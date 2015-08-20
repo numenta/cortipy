@@ -26,8 +26,9 @@
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class GetBitmapTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
@@ -37,17 +38,20 @@ class GetBitmapTest(unittest.TestCase):
     bitmap = client.getBitmap("computer")
 
     self._checkValidBitmap(bitmap, "computer")
+
     
   def testMultipleTokens(self):
     client = cortipy.CorticalClient(useCache=False)
     with self.assertRaises(ValueError):
       client.getBitmap("this should use getTextBitmap")
+      
 
   def testNoFPFromAPI(self):
     client = cortipy.CorticalClient(useCache=False)
     bitmap = client.getBitmap("thisisnotarealword.")
 
     self._checkValidBitmap(bitmap, "thisisnotarealword.")
+
 
   def _checkValidBitmap(self, bitmap, term):
     self.assertIsInstance(bitmap, dict,
@@ -64,6 +68,7 @@ class GetBitmapTest(unittest.TestCase):
     self.assertIsInstance(bitmap["fingerprint"]["positions"], list,
       "The returned object does not contain a \'positions\' list within its "
       " \'fingerprint\' dictionary.")
+
 
 
 if __name__ == '__main__':

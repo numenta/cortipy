@@ -21,13 +21,14 @@
 # THE SOFTWARE.
 
 """
-  This test verifies that createClassification correctly does the call to Cortical.io's
-  API and returns a bitmap
+  This test verifies that createClassification correctly does the call to
+  Cortical.io's API and returns a bitmap
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class CreateClassificationTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
@@ -52,6 +53,7 @@ class CreateClassificationTest(unittest.TestCase):
 
     self._checkValidResponse(response, name)
 
+
   def testCreateClassificationOnlyPositives(self):
     """
     Tests client.createClassification(). Asserts the returned object has fields
@@ -71,6 +73,7 @@ class CreateClassificationTest(unittest.TestCase):
 
     self._checkValidResponse(response, name)
   
+
   def _checkValidResponse(self, response, name):
     # Assert: check the result object.
     self.assertIn("positions", response,
@@ -82,6 +85,7 @@ class CreateClassificationTest(unittest.TestCase):
       "The returned category name is incorrect.")
     self.assertIsInstance(response["positions"], list,
       "The returned object does not contain a \'positions\' list.")
+
 
 
 if __name__ == '__main__':

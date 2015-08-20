@@ -26,8 +26,9 @@
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class CompareTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
@@ -57,6 +58,7 @@ class CompareTest(unittest.TestCase):
     for t in types:
       self.assertIsInstance(distances[t], (float, int),
           "No \'{}\' field in the distances".format(t))
+
 
 
 if __name__ == '__main__':

@@ -26,8 +26,9 @@
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class GetTextBitmapTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
@@ -37,6 +38,7 @@ class GetTextBitmapTest(unittest.TestCase):
     bitmap = client.getTextBitmap("this is a longer string")
 
     self._checkValidBitmap(bitmap, "this is a longer string")
+
 
   def _checkValidBitmap(self, bitmap, text):
     self.assertIsInstance(bitmap, dict,
@@ -53,6 +55,7 @@ class GetTextBitmapTest(unittest.TestCase):
     self.assertIsInstance(bitmap["fingerprint"]["positions"], list,
       "The returned object does not contain a \'positions\' list within its "
       " \'fingerprint\' dictionary.")
+
 
 
 if __name__ == '__main__':

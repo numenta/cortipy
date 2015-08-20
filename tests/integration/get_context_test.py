@@ -26,11 +26,13 @@
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class GetContextTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
+
   def testGetContext(self):
     """
     Tests client.getContext() for a sample term.
@@ -42,16 +44,21 @@ class GetContextTest(unittest.TestCase):
 
     contexts = client.getContext("android")
     self._checkValidContexts(contexts)
+
     
   def _checkValidContexts(self, contexts):
     # Assert: check the result object.
     self.assertIsInstance(contexts, list,
       "Returned object is not of type list as expected.")
-    self.assertGreaterEqual(len(contexts), 1, "Returned object did not contain any elements")
+    self.assertGreaterEqual(len(contexts), 1,
+      "Returned object did not contain any elements")
     self.assertIsInstance(contexts[0], dict)
-    self.assertIn("context_label", contexts[0], "Context does not contain \'context_label\'")
-    self.assertIn("fingerprint", contexts[0], "Context does not contain \'fingerprint\'")
-    self.assertIn("context_id", contexts[0], "Context does not contain \'context_id\'")
+    self.assertIn("context_label", contexts[0],
+      "Context does not contain \'context_label\'")
+    self.assertIn("fingerprint", contexts[0],
+      "Context does not contain \'fingerprint\'")
+    self.assertIn("context_id", contexts[0],
+      "Context does not contain \'context_id\'")
     self.assertIsInstance(contexts[0]["context_label"], str,
       "The \'context_label\' field is not of type string.")
     self.assertEqual(contexts[0]["context_id"], 0,
@@ -64,6 +71,7 @@ class GetContextTest(unittest.TestCase):
     self.assertIsInstance(contexts[0]["fingerprint"]["positions"], list,
       "The returned object does not contain a \'positions\' list within its "
       " \'fingerprint\' dictionary.")
+
 
 
 if __name__ == '__main__':
