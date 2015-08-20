@@ -7,6 +7,7 @@ install:
  - python setup.py install
 
 script:
+ # Run integration tests locally since they require a Cortical.io API key
  - cd tests/unit/
  - py.test --cov ../../cortipy .
 
