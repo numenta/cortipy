@@ -26,11 +26,13 @@
 """
 
 import cortipy
+import unittest
 
-import unittest2 as unittest
+
 
 class ExtractKeywordsTest(unittest.TestCase):
   """Requires CORTICAL_API_KEY to be set"""
+
   def testGetContextReturnFields(self):
     """
     Tests client.getContext() for a sample term.
@@ -44,7 +46,8 @@ class ExtractKeywordsTest(unittest.TestCase):
 
     # Assert: check the result object.
     self.assertIsInstance(keywords, list,
-      "Returned object is not of type list as expected.")
+        "Returned object is not of type list as expected.")
+
 
 
 if __name__ == '__main__':

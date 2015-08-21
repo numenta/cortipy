@@ -421,15 +421,15 @@ class CorticalClient():
     @return         (list)              List where each entry contains a keyword
     """
     responseObj = self._queryAPI("POST",
-                                "/text/keywords",
-                                {
-                                  "retina_name":self.retina
-                                },
-                                postData=text,
-                                headers={
-                                  "Accept": "Application/json",
-                                  "Content-Type": "application/json"
-                                })
+                                 "/text/keywords",
+                                 {
+                                   "retina_name":self.retina
+                                 },
+                                 postData=text,
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
 
     return responseObj
 
@@ -506,8 +506,8 @@ class CorticalClient():
 
     @param bitmaps        (list)    List of List of indices for the bitmap
     @param maxResults     (int)     Maximum number of contexts to get
-    @param getFingerprint (bool)    Whether or not to get the fingerprints of the
-                                    context
+    @param getFingerprint (bool)    Whether or not to get the fingerprints of
+                                    the context
     @return               (list)    A list of dictionaries, where the keys are
                                     'context_label', 'fingerprint' (the bitmap
                                     for the context label), and 'context_id'.
