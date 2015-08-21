@@ -414,6 +414,26 @@ class CorticalClient():
   #   return json.loads(response.content)
 
 
+  def extractKeywords(self, text):
+    """
+    Get a list of keywords extracted from the text
+    @param text     (str)               Text string to get keywords
+    @return         (list)              List where each entry contains a keyword
+    """
+    responseObj = self._queryAPI("POST",
+                                 "/text/keywords",
+                                 {
+                                   "retina_name":self.retina
+                                 },
+                                 postData=text,
+                                 headers={
+                                   "Accept": "Application/json",
+                                   "Content-Type": "application/json"
+                                 })
+
+    return responseObj
+
+
   def compare(self, bitmap1, bitmap2):
     """
     Given two bitmaps, return their comparison for several distance metrics.
@@ -471,6 +491,42 @@ class CorticalClient():
                                   "max_results":10,
                                   "get_fingerprint":False,
                                 },
+                                headers={
+                                  "Accept": "Application/json",
+                                  "Content-Type": "application/json"
+                                })
+
+    return responseObj
+
+
+  def getContextFromText(self, bitmaps, maxResults=10, getFingerprint=False):
+    """
+    Get contexts for a given term. The context ids can be used as parameters in
+    bitmapToTerms().
+
+    @param bitmaps        (list)    List of List of indices for the bitmap
+    @param maxResults     (int)     Maximum number of contexts to get
+    @param getFingerprint (bool)    Whether or not to get the fingerprints of
+                                    the context
+    @return               (list)    A list of dictionaries, where the keys are
+                                    'context_label', 'fingerprint' (the bitmap
+                                    for the context label), and 'context_id'.
+    """
+    positions = []
+    for b in bitmaps:
+      positions.append({"positions": b})
+
+    dumpedData = json.dumps({"and": positions})
+
+    responseObj = self._queryAPI("POST",
+                                "/expressions/contexts",
+                                {
+                                  "retina_name":self.retina,
+                                  "start_index":0,
+                                  "max_results":maxResults,
+                                  "get_fingerprint":getFingerprint,
+                                },
+                                postData=dumpedData,
                                 headers={
                                   "Accept": "Application/json",
                                   "Content-Type": "application/json"
