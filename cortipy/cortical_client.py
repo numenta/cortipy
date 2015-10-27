@@ -50,7 +50,11 @@ RETINA_SIZES = {
       "en_associative": {
         "width": 128,
         "height": 128
-      }
+      },
+      "en_associative_64_univ": {
+        "width": 64,
+        "height": 64
+      },
     }
 
 TERM_SPARSITY = 0.01
@@ -120,12 +124,16 @@ class CorticalClient():
                cacheDir=DEFAULT_CACHE_DIR,
                useCache=True,
                verbosity=DEFAULT_VERBOSITY):
-    # Instantiate API credentials.
+    # Instantiate API credentials
     if apiKey:
       self.apiKey = apiKey
     else:
       self.apiKey = os.environ["CORTICAL_API_KEY"]
-    self.apiUrl = baseUrl
+    if retina == "en_associative_64_univ":
+      self.apiUrl = 'http://numenta.cortical.io:80/rest'
+    else:
+      self.apiUrl = baseUrl
+
     self.cacheDir = cacheDir
     self.verbosity = verbosity
     self.retina = retina
