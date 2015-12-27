@@ -9,4 +9,4 @@ sure==1.2.10
 
 # Program requirements
 requests==1.2.3
-simplejson==3.6.5
+simplejson
