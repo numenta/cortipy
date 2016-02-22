@@ -138,6 +138,7 @@ class CorticalClient():
     self.verbosity = verbosity
     self.retina = retina
     self.useCache = useCache
+    self._session = requests.Session()
 
 
   @cacheDecorator
@@ -157,9 +158,9 @@ class CorticalClient():
         print "\tPost data: \n\t%s" % postData
 
     if method == 'GET':
-      response = requests.get(url, params=queryParams, headers=headers)
+      response = self._session.get(url, params=queryParams, headers=headers)
     elif method == 'POST':
-      response = requests.post(
+      response = self._session.post(
         url, params=queryParams, headers=headers, data=postData)
     else:
       raise RequestMethodError("Method " + method + " is not recognized.")
