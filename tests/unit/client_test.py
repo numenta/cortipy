@@ -48,7 +48,7 @@ class CorticalClientTestCase(unittest.TestCase):
 
   def testWhenConstructingClientProperDefaultPropertiesAreSet(self):
     client = cortipy.CorticalClient(apiKey="fakeKey")
-    
+
     self.assertEqual(client.apiUrl, "http://api.cortical.io/rest",
       "Wrong default API URL")
     self.assertEqual(client.cacheDir, "/tmp/cortipy",
@@ -59,27 +59,28 @@ class CorticalClientTestCase(unittest.TestCase):
       "Wrong default retina")
     self.assertEqual(client.useCache, True,
       "Wrong default cache on/off setting")
-    
 
-  @patch.object(requests, "get")
+
+  @patch.object(requests.sessions.Session, "get")
   def testGetQueryToAPI(self, mockGet):
     """
     Tests the client can send a 'GET' query to the API, asserting we receive
     an HTTP status code reflecting successful operation.
     """
     # Arrange: patch the request in cortipy.CorticalClient._queryAPI().
-    # with patch.object(requests, 'get', return_value=) as mock_get:
+    # with patch.object(requests.sessions.Session,
+    #                   'get', return_value=) as mock_get:
     mockGet.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=200)
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey", useCache=False)
     response = client._queryAPI("GET", "/path", {})
-    
+
     # Assert:
     self.assertEqual({"dummy": "mock body"}, response)
-  
-  
-  @patch.object(requests, "post")
+
+
+  @patch.object(requests.sessions.Session, "post")
   def testPostQueryToAPI(self, mockPost):
     """
     Tests the client can send a 'POST' query to the API, asserting we receive
@@ -87,16 +88,16 @@ class CorticalClientTestCase(unittest.TestCase):
     """
     mockPost.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=200)
-    
+
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
     response = client._queryAPI("POST", "path", {})
-    
+
     # Assert:
     self.assertEqual({"dummy": "mock body"}, response)
-  
 
-  @patch.object(requests, "post")
+
+  @patch.object(requests.sessions.Session, "post")
   def testBadQueryMethodToAPI(self, mockPost):
     """
     Tests the client sending an invalid query method to the API, asserting we
@@ -104,7 +105,7 @@ class CorticalClientTestCase(unittest.TestCase):
     """
     mockPost.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=None)
-    
+
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
 
@@ -113,7 +114,7 @@ class CorticalClientTestCase(unittest.TestCase):
       client._queryAPI("BAD_METHOD", "path", {})
 
 
-  @patch.object(requests, "get")
+  @patch.object(requests.sessions.Session, "get")
   def testAPICannotEncodeError(self, mockPost):
     """
     Tests the client receiving an HTTP error code from the API, asserting we
@@ -121,10 +122,10 @@ class CorticalClientTestCase(unittest.TestCase):
     """
     mockPost.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=400)
-    
+
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
-    
+
     # Assert:
     with self.assertRaises(UnsuccessfulEncodingError):
       client._queryAPI("GET", "path", {})
@@ -134,7 +135,7 @@ class CorticalClientTestCase(unittest.TestCase):
   def testGetBitmap(self):
     """
     Tests client.getBitmap(). Asserts the proper query parameters are passed
-    to the API, returns a complete JSON string in response, and asserts that 
+    to the API, returns a complete JSON string in response, and asserts that
     string is converted into the expected result object for the client code.
     """
     # Arrange: mock JSON response from API, mock out the API endpoint we expect
@@ -143,12 +144,12 @@ class CorticalClientTestCase(unittest.TestCase):
     httpretty.register_uri(httpretty.GET, "http://api.cortical.io/rest/terms",
                            body=mockResponseString,
                            content_type="application/json")
-                           
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
     bitmap = client.getBitmap("owl")
-  
+
     # Assert: check the result object.
     self.assertTrue("term" in bitmap,
       "No \'term\' field in the returned object.")
@@ -162,7 +163,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertIsInstance(bitmap["fingerprint"]["positions"], list,
       "The returned object does not contain a \'positions\' list within its "
       " \'fingerprint\' dictionary.")
-    
+
     # Assert: get the request sent to the API and check it.
     request = httpretty.last_request()
     self.assertEqual(request.method, 'GET', "Incorrect request method.")
@@ -176,13 +177,13 @@ class CorticalClientTestCase(unittest.TestCase):
                                         "max_results": ["10"],
                                         "get_fingerprint": ["True"]},
       "The request field \'queryString\' does not have the expected values.")
-  
-  
+
+
   @httpretty.activate
   def testGetTextBitmap(self):
     """
     Tests client.getTextBitmap(). Asserts the proper query parameters are passed
-    to the API, returns a complete JSON string in response, and asserts that 
+    to the API, returns a complete JSON string in response, and asserts that
     string is converted into the expected result object for the client code.
     """
     # Arrange: mock JSON response from API, mock out the API endpoint we expect
@@ -191,12 +192,12 @@ class CorticalClientTestCase(unittest.TestCase):
     httpretty.register_uri(httpretty.POST, "http://api.cortical.io/rest/text",
                            body=mockResponseString,
                            content_type="application/json")
-                           
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
     bitmap = client.getTextBitmap("do androids dream of electric sheep")
-  
+
     # Assert: check the result object.
     self.assertTrue("text" in bitmap,
       "No \'text\' field in the returned object.")
@@ -208,7 +209,7 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertIsInstance(bitmap["fingerprint"]["positions"], list,
       "The returned object does not contain a \'positions\' list within its "
       " \'fingerprint\' dictionary.")
-    
+
     # Assert: get the request sent to the API and check it.
     request = httpretty.last_request()
     self.assertEqual(request.method, 'POST', "Incorrect request method.")
@@ -218,8 +219,8 @@ class CorticalClientTestCase(unittest.TestCase):
       "The request field \'queryString\' does not exist")
     self.assertEqual(request.querystring, {"retina_name": ["en_synonymous"]},
       "The request field \'queryString\' does not have the expected values.")
-  
-  
+
+
   @httpretty.activate
   def testCompareIdenticalFPs(self):
     """
@@ -235,12 +236,12 @@ class CorticalClientTestCase(unittest.TestCase):
                            content_type="application/json")
     fp1 = [0,13]
     fp2 = [0,13]
-  
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False)
     distances = client.compare(fp1, fp2)
-    
+
     # Assert: expected distance metrics are returned, and result should reflect
     # minimum distances.
     self.assertTrue({"cosineSimilarity", "overlappingAll", "jaccardDistance",
@@ -254,8 +255,8 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual(distances["overlappingAll"], 2,
       "Overlap count is incorrect. Expected 2 but received %d"
       % distances["overlappingAll"])
-  
-      
+
+
   @httpretty.activate
   def testCompareOrthogonalFPs(self):
     """
@@ -271,12 +272,12 @@ class CorticalClientTestCase(unittest.TestCase):
                            content_type="application/json")
     fp1 = [0]
     fp2 = [13]
-  
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False)
     distances = client.compare(fp1, fp2)
-    
+
     # Assert: expected distance metrics are returned, and result should reflect
     # maximum distances.
     self.assertTrue({"cosineSimilarity", "overlappingAll", "jaccardDistance",
@@ -290,8 +291,8 @@ class CorticalClientTestCase(unittest.TestCase):
     self.assertEqual(distances["overlappingAll"], 0,
       "Overlap count is incorrect. Expected 0 but received %d"
       % distances["overlappingAll"])
-  
-  
+
+
   @httpretty.activate
   def testCompareSimilarFPs(self):
     """
@@ -310,18 +311,18 @@ class CorticalClientTestCase(unittest.TestCase):
     fp1 = [0,1]
     fp2 = [1,3]
     fp3 = [10,11]
-  
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False)
     distances_similar = client.compare(fp1, fp2)
-    
+
     httpretty.register_uri(httpretty.POST,
                            "http://api.cortical.io/rest/compare",
                            body=mockResponseStringDissimilar,
                            content_type="application/json")
     distances_dissimilar = client.compare(fp1, fp3)
-    
+
     # Assert: result should reflect distances = 0.
     self.assertTrue((distances_similar["euclideanDistance"] <
             distances_dissimilar["euclideanDistance"]), ("Euclidean for "
@@ -345,12 +346,12 @@ class CorticalClientTestCase(unittest.TestCase):
                            "http://api.cortical.io/rest/terms/contexts",
                            body=mockResponseString,
                            content_type="application/json")
-    
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False)
     contexts = client.getContext("android")
-    
+
     # Assert: check the result object.
     self.assertTrue(isinstance(contexts, list),
       "Returned object is not of type list as expected.")
@@ -361,7 +362,7 @@ class CorticalClientTestCase(unittest.TestCase):
       "The \'context_label\' field is not of type string.")
     self.assertEqual(contexts[0]["context_id"], 0,
       "The top context does not have ID of zero.")
-  
+
 
   @httpretty.activate
   def testCreateClassification(self):
@@ -373,11 +374,11 @@ class CorticalClientTestCase(unittest.TestCase):
     # to be called.
     mockResponseString = getMockApiData("dfw_category.json")
     httpretty.register_uri(
-      httpretty.POST, 
+      httpretty.POST,
       "http://api.cortical.io/rest/classify/create_category_filter",
       body=mockResponseString,
       content_type="application/json")
-                           
+
     # Act: create the client object we'll be testing.
     client = cortipy.CorticalClient(
       apiKey="fakeKey", verbosity=0, useCache=False, retina="en_synonymous")
@@ -394,7 +395,7 @@ class CorticalClientTestCase(unittest.TestCase):
       that some of its noisiest authorities insisted on its being received, \
       for good or for evil, in the superlative degree of comparison only."]
     response = client.createClassification("dfw", positives, negatives)
-  
+
     # Assert: check the result object.
     self.assertTrue("positions" in response,
       "No \'positions\' field in the returned object.")
@@ -405,7 +406,7 @@ class CorticalClientTestCase(unittest.TestCase):
       "The returned category name is incorrect.")
     self.assertIsInstance(response["positions"], list,
       "The returned object does not contain a \'positions\' list.")
-    
+
     # Assert: get the request sent to the API and check it.
     request = httpretty.last_request()
     self.assertEqual(request.method, 'POST', "Incorrect request method.")
@@ -417,7 +418,7 @@ class CorticalClientTestCase(unittest.TestCase):
                                            "filter_name": ["dfw"]},
       "The request field \'queryString\' does not have the expected values.")
 
-  
+
   def testGetSDRFromFingerprint(self):
     """
     Tests client.getSDR(). Asserts the correct binary string is returned for a
@@ -431,14 +432,14 @@ class CorticalClientTestCase(unittest.TestCase):
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
     sdr = client.getSDR(fp)
-    
+
     # Assert:
     self.assertIsInstance(sdr, str, "Result is not of type string as expected.")
     self.assertEqual(sdr, '1000000000000100',
       "The resulting SDR does not match the input bitmap. Expected "
       "[1000000000000100] but instead received [%s]" % sdr)
-  
-  
+
+
   def testGetSDRFromNullFingerprint(self):
     """
     Tests client.getSDR(). Asserts the correct binary string is returned for an
@@ -452,7 +453,7 @@ class CorticalClientTestCase(unittest.TestCase):
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
     sdr = client.getSDR(fp)
-    
+
     # Assert:
     self.assertIsInstance(sdr, str, "Result is not of type string as expected.")
     self.assertEqual(sdr, '0000000000000000',
@@ -468,16 +469,16 @@ class CorticalClientTestCase(unittest.TestCase):
     # Arrange:
     term1 = "Deckard"
     term2 = "Holden"
-    
+
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
     fp1 = client._placeholderFingerprint(term1, option="random")
     fp2 = client._placeholderFingerprint(term2, option="random")
-  
+
     # Assert:
     self.assertNotEqual(fp1, fp2,
       "The generated bitmaps are identical, but should be different.")
-    
+
 
   def testForIdenticalPlaceholderFingerprints(self):
     """
@@ -486,12 +487,12 @@ class CorticalClientTestCase(unittest.TestCase):
     """
     # Arrange:
     term = "Rosen"
-    
+
     # Act:
     client = cortipy.CorticalClient(apiKey="fakeKey")
     fp1 = client._placeholderFingerprint(term, option="random")
     fp2 = client._placeholderFingerprint(term, option="random")
-  
+
     # Assert:
     self.assertEqual(fp1, fp2,
       "The generated bitmaps are different, but should be identical.")
