@@ -26,13 +26,12 @@ import random
 import requests
 
 from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
-from functools import wraps
 
 try:
   import simplejson as json
 except ImportError:
   import json
-
+import msgpack
 
 DEFAULT_BASE_URL = "http://api.cortical.io/rest"
 DEFAULT_RETINA = "en_synonymous"
@@ -60,56 +59,6 @@ RETINA_SIZES = {
 TERM_SPARSITY = 0.01
 
 
-def cacheDecorator(func):
-  """
-  Created to wrap the CorticalClient's _queryAPI() method. If the client's
-  cache is enabled, will try to load API responses from the local cache before
-  going to the API. Then before returning control to the calling function, will
-  cache the API responses into the local file system.
-  """
-  @wraps(func)
-  def cacheWrapper(*args, **kwargs):
-    client = args[0]
-    cacheDir = client.cacheDir
-    method = args[1]
-    resourcePath = args[2]
-    queryParams = args[3]
-    postData = ""
-    if "postData" in kwargs:
-      postData = kwargs["postData"]
-    requestString = json.dumps([
-      resourcePath, method, json.dumps(queryParams), postData
-    ])
-    cacheKey = hashlib.sha224(requestString).hexdigest()
-    cachePath = os.path.join(cacheDir, cacheKey + ".json")
-
-    if client.useCache and os.path.exists(cachePath):
-      if client.verbosity > 0:
-        print "Fetching API data from the cache at %s" % cachePath
-        print "\tRequest string: %s" % requestString
-      return json.loads(open(cachePath, "r").read())
-
-    else:
-      # Wrapped function gets executed here.
-      result = func(*args, **kwargs)
-
-      if client.useCache:
-        # Lazily create cache directory.
-        if not os.path.exists(client.cacheDir):
-          if client.verbosity > 0:
-            print "Creating cache at %s" % client.cacheDir
-          os.makedirs(client.cacheDir)
-        if client.verbosity > 0:
-          print "Writing API response to the cache at %s" % cachePath
-          print "\t%s" % result
-        with open(cachePath, "w") as f:
-          f.write(json.dumps(result))
-
-      return result
-
-  return cacheWrapper
-
-
 
 class CorticalClient():
   """
@@ -134,13 +83,79 @@ class CorticalClient():
     else:
       self.apiUrl = baseUrl
 
+    if useCache and not os.path.exists(cacheDir):
+      os.makedirs(cacheDir)
+
+    self.useCache = useCache
     self.cacheDir = cacheDir
     self.verbosity = verbosity
     self.retina = retina
-    self.useCache = useCache
+    self._session = requests.Session()
 
 
-  @cacheDecorator
+  def _cachedRequest(self, fn, url, params, headers, data=None):
+    """
+    Issues Cortical.io API requests, utilizing local filesystem cache if client
+    was created with useCache=True.
+
+    @param  fn      (function)  e.g. requests.Session().post or
+                                requests.Session().get
+    @param  url     (str)       URL argument to fn
+    @param  params  (dict)      params argument to fn
+    @param  headers (dict)      headers argument to fn
+    @param  data    (str)       Optional data argument to fn
+    @return         (obj)       Parsed response from Cortical.io API.
+    """
+
+    def _doRequest():
+      # Internal request wrapper to issue request and handle the errors.
+      extras = {}
+      if data:
+        extras["data"] = data
+
+      response = fn(url, params=params, headers=headers, **extras)
+
+      if response.status_code != 200:
+        raise UnsuccessfulEncodingError(
+          "Response " + str(response.status_code) + ": " + response.content)
+
+      try:
+        responseObj = json.loads(response.content)
+      except ValueError("Could not decode the query response."):
+        responseObj = []
+
+      return responseObj
+
+    if not self.useCache:
+      return _doRequest()
+
+    # Construct deterministic hash for request
+
+    m = hashlib.sha224()
+
+    m.update(fn.__name__)
+    m.update(url)
+    m.update("".join(str(y) for x in sorted(headers.iteritems()) for y in x))
+    m.update("".join(str(y) for x in sorted(params.iteritems()) for y in x))
+
+    if data:
+      m.update(data)
+
+    cacheKey = m.hexdigest()
+
+    cachePath = os.path.join(self.cacheDir, "{}.msgpack".format(cacheKey))
+
+    if os.path.isfile(cachePath):
+      # Request has been made before, load and return original response
+      response = msgpack.load(open(cachePath, "r"))
+    else:
+      # Make new request, cache the response
+      response = _doRequest()
+      msgpack.dump(response, open(cachePath, "w"))
+
+    return response
+
+
   def _queryAPI(self, method, resourcePath, queryParams,
                 postData=None, headers=None):
     url = self.apiUrl + resourcePath
@@ -157,24 +172,20 @@ class CorticalClient():
         print "\tPost data: \n\t%s" % postData
 
     if method == 'GET':
-      response = requests.get(url, params=queryParams, headers=headers)
+      response = self._cachedRequest(self._session.get,
+                                     url,
+                                     params=queryParams,
+                                     headers=headers)
     elif method == 'POST':
-      response = requests.post(
-        url, params=queryParams, headers=headers, data=postData)
+      response = self._cachedRequest(self._session.post,
+                                     url,
+                                     params=queryParams,
+                                     headers=headers,
+                                     data=postData)
     else:
       raise RequestMethodError("Method " + method + " is not recognized.")
-    if response.status_code != 200:
-      raise UnsuccessfulEncodingError(
-        "Response " + str(response.status_code) + ": " + response.content)
-    if self.verbosity > 1:
-      print "API Response content:"
-      print response.content
-    try:
-      responseObj = json.loads(response.content)
-    except ValueError("Could not decode the query response."):
-      responseObj = []
-    return responseObj
 
+    return response
 
   def _placeholderFingerprint(self, text, option=random):
     """
