@@ -23,15 +23,19 @@
 import hashlib
 import os
 import random
-import requests
+import warnings
 
-from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
+import msgpack
+import requests
 
 try:
   import simplejson as json
 except ImportError:
   import json
-import msgpack
+
+from cortipy.exceptions import UnsuccessfulEncodingError, RequestMethodError
+
+
 
 DEFAULT_BASE_URL = "http://api.cortical.io/rest"
 DEFAULT_RETINA = "en_synonymous"
@@ -121,7 +125,14 @@ class CorticalClient():
 
       try:
         responseObj = json.loads(response.content)
-      except ValueError("Could not decode the query response."):
+      except ValueError:
+        warnings.warn(
+          "Suppressing error in parsing response for {} {} query={} data={}"
+          .format(fn.__name__.upper(),
+                  url,
+                  repr(params),
+                  repr(data))
+        )
         responseObj = []
 
       return responseObj
@@ -187,21 +198,22 @@ class CorticalClient():
 
     return response
 
-  def _placeholderFingerprint(self, text, option=random):
+
+  def _placeholderFingerprint(self, text, option=DEFAULT_FILL_SDR):
     """
     When the API returns a null fingerprint, fill with a random or empty bitmap.
 
     We seed the random number generator such that a given string will yield the
     same fingerprint each time this function is called.
     """
-    if option == "random":
+    if option == DEFAULT_FILL_SDR:
       size = RETINA_SIZES[self.retina]
       total = int(float(size["width"]) * float(size["height"]))
       random.seed(text)
       bitmap = random.sample(xrange(total), int(total*TERM_SPARSITY))
-      return {"positions":sorted(bitmap)}
+      return {"positions": sorted(bitmap)}
     else:
-      return {"positions":[]}
+      return {"positions": []}
 
 
   def getBitmap(self, term):
@@ -253,8 +265,7 @@ class CorticalClient():
       fpInfo["score"] = None
       fpInfo["pos_types"] = None
       fpInfo["term"] = term
-      fpInfo["fingerprint"] = self._placeholderFingerprint(
-        term, DEFAULT_FILL_SDR)
+      fpInfo["fingerprint"] = self._placeholderFingerprint(term)
 
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
@@ -306,8 +317,7 @@ class CorticalClient():
               "text includes punctuation that should be ignored by the "
               "tokenizer.\nGenerating a placeholder fingerprint for \'%s\'..."
               % (text, text))
-      fpInfo["positions"] = self._placeholderFingerprint(
-        text, DEFAULT_FILL_SDR)
+      fpInfo["positions"] = self._placeholderFingerprint(text)
 
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
