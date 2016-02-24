@@ -94,8 +94,21 @@ class CorticalClient():
 
 
   def _cachedRequest(self, fn, url, params, headers, data=None):
+    """
+    Issues Cortical.io API requests, utilizing local filesystem cache if client
+    was created with useCache=True.
+
+    @param  fn      (function)  e.g. requests.Session().post or
+                                requests.Session().get
+    @param  url     (str)       URL argument to fn
+    @param  params  (dict)      params argument to fn
+    @param  headers (dict)      headers argument to fn
+    @param  data    (str)       Optional data argument to fn
+    @return         (obj)       Parsed response from Cortical.io API.
+    """
+
     def _doRequest():
-      # Internal request wrapper to
+      # Internal request wrapper to issue request and handle the errors.
       extras = {}
       if data:
         extras["data"] = data
@@ -160,15 +173,15 @@ class CorticalClient():
 
     if method == 'GET':
       response = self._cachedRequest(self._session.get,
-                                      url,
-                                      params=queryParams,
-                                      headers=headers)
+                                     url,
+                                     params=queryParams,
+                                     headers=headers)
     elif method == 'POST':
       response = self._cachedRequest(self._session.post,
-                                      url,
-                                      params=queryParams,
-                                      headers=headers,
-                                      data=postData)
+                                     url,
+                                     params=queryParams,
+                                     headers=headers,
+                                     data=postData)
     else:
       raise RequestMethodError("Method " + method + " is not recognized.")
 
