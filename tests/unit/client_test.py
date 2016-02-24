@@ -86,6 +86,7 @@ class CorticalClientTestCase(unittest.TestCase):
     Tests the client can send a 'POST' query to the API, asserting we receive
     an HTTP status code reflecting successful operation.
     """
+    mockPost.__name__ = "post"
     mockPost.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=200)
 
@@ -115,12 +116,13 @@ class CorticalClientTestCase(unittest.TestCase):
 
 
   @patch.object(requests.sessions.Session, "get")
-  def testAPICannotEncodeError(self, mockPost):
+  def testAPICannotEncodeError(self, mockGet):
     """
     Tests the client receiving an HTTP error code from the API, asserting we
     receive a UnsuccessfulEncodingError.
     """
-    mockPost.return_value = Mock(
+    mockGet.__name__ = "get"
+    mockGet.return_value = Mock(
       content='{"dummy": "mock body"}', status_code=400)
 
     # Act:
