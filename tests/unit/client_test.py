@@ -116,10 +116,10 @@ class CorticalClientTestCase(unittest.TestCase):
 
 
   @patch.object(requests.sessions.Session, "get")
-  def testAPICannotEncodeError(self, mockGet):
+  def testGracefulHandlingOfAPIError(self, mockGet):
     """
-    Tests the client receiving an HTTP error code from the API, asserting we
-    receive a UnsuccessfulEncodingError.
+    Tests the client receiving an HTTP error code from the API returns an empty
+    encoding.
     """
     mockGet.__name__ = "get"
     mockGet.return_value = Mock(
@@ -129,8 +129,9 @@ class CorticalClientTestCase(unittest.TestCase):
     client = cortipy.CorticalClient(apiKey="fakeKey")
 
     # Assert:
-    with self.assertRaises(UnsuccessfulEncodingError):
-      client._queryAPI("GET", "path", {})
+    result = client._queryAPI("GET", "path", {})
+
+    self.assertEqual(result, [])
 
 
   @httpretty.activate
