@@ -97,7 +97,7 @@ class CorticalClient():
     self._session = requests.Session()
 
 
-  def _cachedRequest(self, fn, url, params, headers, data=None):
+  def _cachedRequest(self, fn, url, params, headers, data=None, ignore=True):
     """
     Issues Cortical.io API requests, utilizing local filesystem cache if client
     was created with useCache=True.
@@ -108,6 +108,7 @@ class CorticalClient():
     @param  params  (dict)      params argument to fn
     @param  headers (dict)      headers argument to fn
     @param  data    (str)       Optional data argument to fn
+    @param  ignore  (bool)      Ignore errors
     @return         (obj)       Parsed response from Cortical.io API.
     """
 
@@ -120,8 +121,12 @@ class CorticalClient():
       response = fn(url, params=params, headers=headers, **extras)
 
       if response.status_code != 200:
-        raise UnsuccessfulEncodingError(
-          "Response " + str(response.status_code) + ": " + response.content)
+        msg = "Response {}: {}".format(response.status_code, response.content)
+        if ignore:
+          warnings.warn(msg)
+          return []
+        else:
+          raise UnsuccessfulEncodingError(msg)
 
       try:
         responseObj = json.loads(response.content)
@@ -311,13 +316,13 @@ class CorticalClient():
     if isinstance(responseObj, list) and len(responseObj)>0:
       fpInfo = responseObj[0]
     else:
-      fpInfo = {}
+      fpInfo = self._placeholderFingerprint(text)
+
       if self.verbosity > 0:
         print ("API could not return info for the text \'%s\'. Perhaps the "
               "text includes punctuation that should be ignored by the "
               "tokenizer.\nGenerating a placeholder fingerprint for \'%s\'..."
               % (text, text))
-      fpInfo["positions"] = self._placeholderFingerprint(text)
 
     # Include values for SDR dimensions and sparsity.
     if (not "width" in fpInfo) or (not "height" in fpInfo):
@@ -330,7 +335,10 @@ class CorticalClient():
     fpInfo["sparsity"] = sparsity
     fpInfo["text"] = text
     fpInfo["fingerprint"] = {}
-    fpInfo["fingerprint"]["positions"] = fpInfo["positions"]
+    # copy fpInfo["positions"] to fpInfo["fingerprint"]["positions"], otherwise
+    # fpInfo["fingerprint"]["positions"] and fpInfo["fingerprint"]["positions"]
+    # are the same obj and both will be deleted in the line that follows.
+    fpInfo["fingerprint"]["positions"] = fpInfo["positions"][:]
     del fpInfo["positions"]
 
     return fpInfo
