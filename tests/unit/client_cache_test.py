@@ -27,6 +27,7 @@ import requests
 import shutil
 import tempfile
 import unittest2 as unittest
+import warnings
 
 from mock import Mock, patch
 
@@ -111,9 +112,121 @@ class CorticalClientTestCase(unittest.TestCase):
     result2 = client._queryAPI(
       method, resourcePath, queryParams, postData=postData)
 
-    # Assert.  Assert only one request made, both responses equal
+    # Assert.  Assert only one request made, both responses equal, and only one
+    # cache file created
     self.assertEqual(mockGet.call_count, 1)
     self.assertDictEqual(result1, result2)
+    self.assertEqual(len(os.listdir(cacheDir)), 1,
+                     "More than one cache file generated for duplicate "
+                     "requests")
+
+
+  @patch.object(requests.sessions.Session, "get")
+  def testUsingCache_RandomEncodingsSubstituteEmptyResponses(self, mockGet):
+    """
+    Random encodings are returned by getBitmap() and duplicate requests
+    prevented
+    """
+    # Arrange.
+    bogusTerm = "bogus"
+    mockGet.__name__ = "get"
+
+    # Mock an empty response, regardless of bogus term
+    mockGet.return_value = Mock(status_code=200, content='[]')
+
+    cacheDir = tempfile.mkdtemp()
+    self.addCleanup(shutil.rmtree, cacheDir)
+
+    # Act.  Make two identical calls.
+    client = cortipy.CorticalClient(apiKey="fakeKey",
+                                    useCache=True,
+                                    cacheDir=cacheDir)
+    result1 = client.getBitmap(bogusTerm)
+    result2 = client.getBitmap(bogusTerm)
+
+    # Assert.  Assert only one request made, both responses equal, and only one
+    # cache file created
+    self.assertEqual(mockGet.call_count, 1)
+    self.assertDictEqual(result1, result2)
+
+    self.assertEqual(result1["fingerprint"],
+                     client._placeholderFingerprint(bogusTerm))
+    self.assertEqual(len(os.listdir(cacheDir)), 1,
+                     "More than one cache file generated for duplicate "
+                     "requests")
+
+
+  @patch.object(requests.sessions.Session, "get")
+  def testUsingCache_CachedRandomEncodingsAreUnique(self, mockGet):
+    """
+    Random encodings are returned by getBitmap() and unique for unique terms
+    """
+    # Arrange.
+    bogusTerm = "bogus"
+    mockGet.__name__ = "get"
+
+    # Mock an empty response, regardless of bogus term
+    mockGet.return_value = Mock(status_code=200, content='[]')
+
+    cacheDir = tempfile.mkdtemp()
+    self.addCleanup(shutil.rmtree, cacheDir)
+
+    # Act.  Make two identical calls.
+    client = cortipy.CorticalClient(apiKey="fakeKey",
+                                    useCache=True,
+                                    cacheDir=cacheDir)
+    result1 = client.getBitmap(bogusTerm)
+    result2 = client.getBitmap(bogusTerm[::-1])
+
+    # Assert.  Assert only one request made, both responses equal, and only one
+    # cache file created
+    self.assertEqual(mockGet.call_count, 2)
+    self.assertNotEqual(result1, result2)
+
+
+  @patch.object(requests.sessions.Session, "get")
+  def testUsingCache_RandomEncodingsSubstituteErrors(self, mockGet):
+    """
+    Random encodings are returned by getBitmap() and unique for unique terms
+    """
+    # Arrange.
+    bogusTerm = "bogus"
+    mockGet.__name__ = "get"
+
+    # Mock a broken response which would otherwise cause json.loads() to fail,
+    # regardless of bogus term
+    mockGet.return_value = Mock(status_code=200, content='[')
+
+
+    cacheDir = tempfile.mkdtemp()
+    self.addCleanup(shutil.rmtree, cacheDir)
+
+    # Act.  Make two identical calls.
+    client = cortipy.CorticalClient(apiKey="fakeKey",
+                                    useCache=True,
+                                    cacheDir=cacheDir)
+
+    with warnings.catch_warnings(record=True) as allWarnings:
+      result1 = client.getBitmap(bogusTerm)
+      result2 = client.getBitmap(bogusTerm)
+
+    # Assert.  Assert only one request made, both responses equal, and only one
+    # cache file created
+    self.assertEqual(mockGet.call_count, 1)
+    self.assertDictEqual(result1, result2)
+    self.assertEqual(result1["fingerprint"],
+                     client._placeholderFingerprint(bogusTerm))
+    self.assertEqual(len(os.listdir(cacheDir)), 1,
+                     "More than one cache file generated for duplicate "
+                     "requests")
+
+    for warning in allWarnings:
+      if str(warning.message).startswith(
+          "Suppressing error in parsing response"):
+        break
+    else:
+      self.fail("Warning not raised as expected")
+
 
 
 if __name__ == '__main__':
