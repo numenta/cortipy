@@ -76,7 +76,9 @@ class CorticalClient():
                retina=DEFAULT_RETINA,
                cacheDir=DEFAULT_CACHE_DIR,
                useCache=True,
-               verbosity=DEFAULT_VERBOSITY):
+               verbosity=DEFAULT_VERBOSITY,
+               fillSDR=DEFAULT_FILL_SDR,
+               ignore=True):
     # Instantiate API credentials
     if apiKey:
       self.apiKey = apiKey
@@ -95,9 +97,11 @@ class CorticalClient():
     self.verbosity = verbosity
     self.retina = retina
     self._session = requests.Session()
+    self.fillSDR = fillSDR
+    self.ignore = ignore # Ignore errors, warn instead
 
 
-  def _cachedRequest(self, fn, url, params, headers, data=None, ignore=True):
+  def _cachedRequest(self, fn, url, params, headers, data=None):
     """
     Issues Cortical.io API requests, utilizing local filesystem cache if client
     was created with useCache=True.
@@ -108,7 +112,6 @@ class CorticalClient():
     @param  params  (dict)      params argument to fn
     @param  headers (dict)      headers argument to fn
     @param  data    (str)       Optional data argument to fn
-    @param  ignore  (bool)      Ignore errors
     @return         (obj)       Parsed response from Cortical.io API.
     """
 
@@ -122,11 +125,12 @@ class CorticalClient():
 
       if response.status_code != 200:
         msg = "Response {}: {}".format(response.status_code, response.content)
-        if ignore:
-          warnings.warn(msg)
-          return []
-        else:
-          raise UnsuccessfulEncodingError(msg)
+
+      if self.ignore:
+        warnings.warn(msg)
+        return []
+      else:
+        raise UnsuccessfulEncodingError(msg)
 
       try:
         responseObj = json.loads(response.content)
@@ -204,14 +208,14 @@ class CorticalClient():
     return response
 
 
-  def _placeholderFingerprint(self, text, option=DEFAULT_FILL_SDR):
+  def _placeholderFingerprint(self, text):
     """
     When the API returns a null fingerprint, fill with a random or empty bitmap.
 
     We seed the random number generator such that a given string will yield the
     same fingerprint each time this function is called.
     """
-    if option == DEFAULT_FILL_SDR:
+    if self.fillSDR == "random":
       size = RETINA_SIZES[self.retina]
       total = int(float(size["width"]) * float(size["height"]))
       random.seed(text)
