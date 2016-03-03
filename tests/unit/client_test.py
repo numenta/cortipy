@@ -474,9 +474,9 @@ class CorticalClientTestCase(unittest.TestCase):
     term2 = "Holden"
 
     # Act:
-    client = cortipy.CorticalClient(apiKey="fakeKey")
-    fp1 = client._placeholderFingerprint(term1, option="random")
-    fp2 = client._placeholderFingerprint(term2, option="random")
+    client = cortipy.CorticalClient(apiKey="fakeKey", fillSDR="random")
+    fp1 = client._placeholderFingerprint(term1)
+    fp2 = client._placeholderFingerprint(term2)
 
     # Assert:
     self.assertNotEqual(fp1, fp2,
@@ -492,9 +492,9 @@ class CorticalClientTestCase(unittest.TestCase):
     term = "Rosen"
 
     # Act:
-    client = cortipy.CorticalClient(apiKey="fakeKey")
-    fp1 = client._placeholderFingerprint(term, option="random")
-    fp2 = client._placeholderFingerprint(term, option="random")
+    client = cortipy.CorticalClient(apiKey="fakeKey", fillSDR="random")
+    fp1 = client._placeholderFingerprint(term)
+    fp2 = client._placeholderFingerprint(term)
 
     # Assert:
     self.assertEqual(fp1, fp2,
