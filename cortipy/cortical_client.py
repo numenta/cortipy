@@ -125,12 +125,11 @@ class CorticalClient():
 
       if response.status_code != 200:
         msg = "Response {}: {}".format(response.status_code, response.content)
-
-      if self.ignore:
-        warnings.warn(msg)
-        return []
-      else:
-        raise UnsuccessfulEncodingError(msg)
+        if self.ignore:
+          warnings.warn(msg)
+          return []
+        else:
+          raise UnsuccessfulEncodingError(msg)
 
       try:
         responseObj = json.loads(response.content)
