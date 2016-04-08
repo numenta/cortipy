@@ -12,6 +12,10 @@ To install, run:
 
     python setup.py install
 
+If you plan on making changes to cortipy, install in development mode:
+	
+	python setup.py develop --user
+
 Then, set up the following environment variables with your REST API credentials:
 
     export CORTICAL_API_KEY=api_key
